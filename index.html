@@ -107,6 +107,15 @@
   .rfoot button:hover { opacity: .85; }
   .rfoot .sub { display: flex; gap: 8px; }
   .rfoot .sub button { flex: 1; background: #2a2a36; color: #ccc; font-weight: 400; }
+  .rfoot button.accent2 {
+    background: linear-gradient(90deg, #D568E3, #13F4FB); color: #000; font-weight: 700;
+  }
+  .rfoot .seedrow { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 12px; }
+  .rfoot .seedrow label { color: #999; width: 46px; }
+  .rfoot .seedrow input {
+    flex: 1; background: #12121a; border: 1px solid #333; color: #ddd;
+    padding: 5px 8px; border-radius: 4px; font-family: inherit; font-size: 12px;
+  }
   .rfoot textarea {
     width: 100%; height: 110px; background: #0e0e14; border: 1px solid #2c2c38;
     color: #9fe; font-family: ui-monospace, monospace; font-size: 11px; padding: 8px; border-radius: 6px; resize: vertical;
@@ -174,8 +183,8 @@
           <button data-mode="full" id="ui-full">完整</button>
         </div>
         <div class="toggle" id="lang-toggle">
-          <button data-lang="zh" class="on">中</button>
-          <button data-lang="en">EN</button>
+          <button data-lang="zh">中</button>
+          <button data-lang="en" class="on">EN</button>
         </div>
       </div>
       <div class="field"><label>name</label><input type="text" id="f-name" value="My Theme"></div>
@@ -186,6 +195,11 @@
     </div>
     <div class="rlist" id="rlist"></div>
     <div class="rfoot">
+      <button id="btn-random" class="accent2">🎲 Random theme</button>
+      <div class="field seedrow">
+        <label id="ui-seedlabel">seed</label>
+        <input type="text" id="f-seed" placeholder="—">
+      </div>
       <button id="btn-copy">📋 复制 JSON 到剪贴板</button>
       <div class="sub">
         <button id="btn-save">💾 下载 .json</button>
@@ -206,7 +220,7 @@ const T = {
     modehintFull: "完整模式:全部 72 个 token。⚠ 标记的有已知问题。",
     copy: "📋 复制 JSON 到剪贴板", save: "💾 下载 .json", reset: "↺ 重置",
     copied: "已复制到剪贴板 ✔", copiedFb: "已复制(兼容模式)✔", saved: "已下载 ",
-    didReset: "已重置",
+    didReset: "已重置", random: "🎲 随机主题", seed: "种子", randomized: "已生成配色 · 种子 ",
     pv: { user: "帮我改一下这个主题的配色", reply: "好的,我来调整。",
       read: "  ⎿ 读取 settings.json…", found: "找到 theme:", perm: "⚠ 权限确认",
       opt: '❯ <b>1.</b> 是　　<b>2.</b> 是,全部允许　　<b>3.</b> 否', plan: "⏸ Plan 模式",
@@ -219,7 +233,7 @@ const T = {
     modehintFull: "Full: all 72 tokens. Keys marked ⚠ have known issues.",
     copy: "📋 Copy JSON to clipboard", save: "💾 Download .json", reset: "↺ Reset",
     copied: "Copied to clipboard ✔", copiedFb: "Copied (fallback) ✔", saved: "Downloaded ",
-    didReset: "Reset done",
+    didReset: "Reset done", random: "🎲 Random theme", seed: "seed", randomized: "Generated · seed ",
     pv: { user: "Help me tweak this theme's colors", reply: "Sure, adjusting now.",
       read: "  ⎿ reading settings.json…", found: "theme found:", perm: "⚠ Permission",
       opt: '❯ <b>1.</b> Yes　　<b>2.</b> Yes, allow all　　<b>3.</b> No', plan: "⏸ Plan mode",
@@ -334,7 +348,7 @@ const PREVIEW_BG = { dark: { bg:"#0d0d14", border:"#333", titlebar:"#12121f" },
 const DEFAULTS = {};
 GROUPS.forEach(g => g.tokens.forEach(t => DEFAULTS[t[0]] = t[3]));
 const state = { ...DEFAULTS };
-let lang = "zh", mode = "simple";
+let lang = "en", mode = "simple";
 const term = document.getElementById("term");
 const $ = id => document.getElementById(id);
 
@@ -397,6 +411,7 @@ function applyLang() {
   $("ui-simple").textContent = t.simple; $("ui-full").textContent = t.full;
   $("ui-modehint").textContent = mode === "simple" ? t.modehintSimple : t.modehintFull;
   $("btn-copy").textContent = t.copy; $("btn-save").textContent = t.save; $("btn-reset").textContent = t.reset;
+  $("btn-random").textContent = t.random; $("ui-seedlabel").textContent = t.seed;
   const p = t.pv;
   $("pv-user").textContent = p.user; $("pv-reply").textContent = p.reply;
   $("pv-read").textContent = p.read; $("pv-found").textContent = p.found;
@@ -408,6 +423,90 @@ function applyLang() {
 function toast(msg) {
   const t = $("toast"); t.textContent = msg; t.classList.add("show");
   clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 1600);
+}
+
+// ============ seeded palette generator ============
+// deterministic PRNG + HSL/contrast helpers → a tasteful, always-usable theme
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function strSeed(s){let h=1779033703^s.length;for(let i=0;i<s.length;i++){h=Math.imul(h^s.charCodeAt(i),3432918353);h=h<<13|h>>>19;}return h>>>0;}
+function hsl2hex(h,s,l){h=((h%360)+360)%360;s=Math.max(0,Math.min(100,s))/100;l=Math.max(0,Math.min(100,l))/100;
+  const k=n=>(n+h/30)%12,a=s*Math.min(l,1-l),f=n=>l-a*Math.max(-1,Math.min(k(n)-3,9-k(n),1));
+  const to=x=>Math.round(x*255).toString(16).padStart(2,"0");return("#"+to(f(0))+to(f(8))+to(f(4))).toUpperCase();}
+function hex2hsl(hex){let r=parseInt(hex.substr(1,2),16)/255,g=parseInt(hex.substr(3,2),16)/255,b=parseInt(hex.substr(5,2),16)/255;
+  const mx=Math.max(r,g,b),mn=Math.min(r,g,b);let h=0,s,l=(mx+mn)/2;
+  if(mx===mn){s=0;}else{const d=mx-mn;s=l>.5?d/(2-mx-mn):d/(mx+mn);
+    if(mx===r)h=(g-b)/d+(g<b?6:0);else if(mx===g)h=(b-r)/d+2;else h=(r-g)/d+4;h/=6;}
+  return[h*360,s*100,l*100];}
+function relLum(hex){const c=[1,3,5].map(i=>parseInt(hex.substr(i,2),16)/255).map(v=>v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4));return .2126*c[0]+.7152*c[1]+.0722*c[2];}
+function contrast(a,b){const L1=relLum(a),L2=relLum(b);return(Math.max(L1,L2)+.05)/(Math.min(L1,L2)+.05);}
+function fitContrast(hex,ref,target,goLight){let[h,s,l]=hex2hsl(hex);for(let i=0;i<70&&contrast(hsl2hex(h,s,l),ref)<target;i++){l+=goLight?2:-2;l=Math.max(0,Math.min(100,l));}return hsl2hex(h,s,l);}
+
+function genPalette(seedStr){
+  const rnd=mulberry32(strSeed(seedStr)),pick=(a,b)=>a+rnd()*(b-a),chance=p=>rnd()<p;
+  const dark=chance(0.72);                        // mostly dark, some light — never all-white
+  const baseHue=Math.floor(rnd()*360);
+  const schemes=[[0,180],[0,150,210],[0,30,330],[0,90,180,270]];  // complementary / split / analogous / tetradic
+  const sc=schemes[Math.floor(rnd()*schemes.length)];
+  const H=i=>(baseHue+sc[i%sc.length])%360;
+  const shim=hex=>{const[h,s,l]=hex2hsl(hex);return hsl2hex(h,Math.max(0,s-10),Math.min(100,l+14));};
+  const lighten=(hex,d)=>{const[h,s,l]=hex2hsl(hex);return hsl2hex(h,s,Math.max(0,Math.min(100,l+d)));};
+
+  const bgL=dark?pick(7,13):pick(95,98);
+  const bg=hsl2hex(baseHue,dark?pick(18,32):pick(8,16),bgL);
+  const accentL=dark?pick(55,68):pick(42,52);
+  const accent=hsl2hex(H(0),pick(70,95),accentL);
+  let text=hsl2hex(H(1),dark?pick(15,45):pick(30,60),dark?pick(85,95):pick(12,22));
+  text=fitContrast(text,bg,8,dark);               // guarantee readable body text
+
+  const inactive=hsl2hex(baseHue,pick(8,20),dark?pick(55,68):pick(45,58));
+  const subtle=hsl2hex(baseHue,pick(6,16),dark?pick(38,48):pick(62,72));
+  const success=hsl2hex(pick(120,150),pick(60,85),dark?pick(55,65):pick(38,46));  // stays green
+  const error=hsl2hex(pick(350,368),pick(70,90),dark?pick(55,64):pick(45,52));     // stays red
+  const warning=hsl2hex(pick(38,52),pick(80,95),dark?pick(55,65):pick(45,52));     // stays amber
+  const planHue=(baseHue+(chance(0.5)?270:30))%360;
+  const planMode=hsl2hex(planHue,pick(65,90),dark?pick(58,68):pick(46,54));
+  const merged=hsl2hex(H(2),pick(45,70),dark?pick(60,70):pick(48,56));
+
+  let umbgL=dark?pick(22,34):pick(78,90);
+  let umbg=hsl2hex(H(0),dark?pick(35,55):pick(35,60),umbgL);
+  for(let i=0;i<40&&contrast(text,umbg)<4.5;i++){umbgL+=dark?-2:2;umbg=hsl2hex(H(0),40,Math.max(0,Math.min(100,umbgL)));}
+
+  const P={
+    claude:accent, claudeShimmer:shim(accent),
+    claudeBlue_FOR_SYSTEM_SPINNER:hsl2hex(220,80,accentL), claudeBlueShimmer_FOR_SYSTEM_SPINNER:hsl2hex(220,70,accentL+14),
+    professionalBlue:hsl2hex(220,70,dark?55:48), chromeYellow:hsl2hex(48,90,dark?60:52),
+    text, inverseText:dark?"#000000":"#FFFFFF", inactive, inactiveShimmer:lighten(inactive,12),
+    subtle, suggestion:hsl2hex(H(1),pick(55,80),dark?60:52), remember:success, background:bg,
+    success, error, warning, warningShimmer:shim(warning), merged,
+    promptBorder:accent, promptBorderShimmer:shim(accent), permission:warning, permissionShimmer:shim(warning),
+    planMode, autoAccept:success, autoAcceptShimmer:shim(success), skill:accent, effortUltra:planMode,
+    bashBorder:hsl2hex(planHue,70,dark?58:48), ide:accent, fastMode:warning, fastModeShimmer:shim(warning),
+    diffAdded:hsl2hex(135,pick(60,80),dark?pick(30,42):pick(80,88)),
+    diffRemoved:hsl2hex(357,pick(60,80),dark?pick(30,42):pick(80,88)),
+    diffAddedDimmed:hsl2hex(135,30,dark?24:88), diffRemovedDimmed:hsl2hex(357,30,dark?24:88),
+    diffAddedWord:hsl2hex(135,80,dark?50:70), diffRemovedWord:hsl2hex(357,80,dark?55:72),
+    userMessageBackground:umbg, userMessageBackgroundHover:lighten(umbg,dark?6:-6),
+    composerSidebarBackground:hsl2hex(baseHue,dark?22:12,dark?bgL+4:bgL-3),
+    messageActionsBackground:hsl2hex(baseHue,20,dark?bgL+6:bgL-4),
+    bashMessageBackgroundColor:hsl2hex(baseHue,18,dark?bgL+6:bgL-4),
+    memoryBackgroundColor:hsl2hex((baseHue+140)%360,25,dark?bgL+5:bgL-4),
+    selectionBg:hsl2hex(H(0),40,dark?38:70),
+    rate_limit_fill:success, rate_limit_empty:hsl2hex(baseHue,12,dark?26:80),
+    briefLabelYou:warning, briefLabelClaude:accent, clawd_body:accent, clawd_background:umbg,
+  };
+  const subHue={red:2,blue:220,green:135,yellow:48,purple:280,orange:28,pink:330,cyan:190};
+  for(const n in subHue) P[n+"_FOR_SUBAGENTS_ONLY"]=hsl2hex(subHue[n],pick(60,80),dark?62:50);
+  [["red",0],["orange",30],["yellow",52],["green",130],["blue",215],["indigo",255],["violet",290]].forEach(([n,h])=>{
+    P["rainbow_"+n]=hsl2hex(h,85,dark?58:50); P["rainbow_"+n+"_shimmer"]=hsl2hex(h,75,dark?70:62);});
+  return {base:dark?"dark":"light", colors:P};
+}
+function applySeed(seedStr){
+  const {base,colors}=genPalette(seedStr);
+  $("f-base").value=base;
+  for(const k in colors) if(k in DEFAULTS) state[k]=colors[k];
+  buildRows(); applyPreview();
+  $("f-seed").value=seedStr;
+  toast(T[lang].randomized+seedStr);
 }
 
 // ---- toggles ----
@@ -438,7 +537,9 @@ $("btn-save").onclick = () => {
   a.href = URL.createObjectURL(blob); a.download = name + ".json"; a.click();
   URL.revokeObjectURL(a.href); toast(T[lang].saved + name + ".json");
 };
-$("btn-reset").onclick = () => { Object.assign(state, DEFAULTS); buildRows(); applyPreview(); toast(T[lang].didReset); };
+$("btn-reset").onclick = () => { Object.assign(state, DEFAULTS); buildRows(); applyPreview(); $("f-seed").value=""; toast(T[lang].didReset); };
+$("btn-random").onclick = () => applySeed(Math.random().toString(36).slice(2, 8));
+$("f-seed").onchange = () => { const v = $("f-seed").value.trim(); if (v) applySeed(v); };
 $("f-name").oninput = refreshJSON;
 $("f-base").onchange = applyPreview;
 

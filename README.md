@@ -52,6 +52,7 @@ Then:
 
 | | |
 |---|---|
+| 🎲 **Random theme** | One click generates a tasteful, contrast-checked palette from a seed — reproducible, never unusable |
 | 🖼️ **Live preview** | A mock Claude Code terminal reflects every change in real time |
 | 🎚️ **Drag-and-drop pickers** | Color picker + hex input for every token, synced both ways |
 | 🔀 **Simple / Full modes** | ~15 everyday tokens, or all **72** including internal ones |
@@ -93,7 +94,7 @@ Flagged with ⚠ in the editor:
 
 ## 🗺️ Roadmap
 
-- [ ] 🎲 **Random seed** — generate a tasteful, usable palette with one click (contrast-checked, never all-white)
+- [x] 🎲 **Random seed** — generate a tasteful, usable palette with one click (contrast-checked, never all-white)
 - [ ] 🖥️ Light-theme preview parity
 - [ ] 📦 A gallery of community-submitted themes
 - [ ] ♿ Built-in WCAG contrast checker per token
