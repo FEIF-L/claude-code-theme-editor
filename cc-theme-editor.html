@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code Theme Editor</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Segoe UI", ui-monospace, "Cascadia Code", "Consolas", monospace;
+    background: #15151c; color: #ccc; height: 100vh; overflow: hidden;
+  }
+  .app { display: flex; height: 100vh; }
+
+  /* ---------- LEFT: preview ---------- */
+  .left { flex: 1 1 55%; padding: 20px; overflow-y: auto; }
+  .term {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,.4);
+  }
+  .titlebar {
+    background: var(--titlebar); padding: 0 0 0 12px; height: 34px;
+    display: flex; align-items: center; border-bottom: 1px solid var(--border);
+  }
+  .titlebar .t { font-size: 12px; color: var(--inactive); display: flex; align-items: center; gap: 6px; }
+  .titlebar .t .ico { color: var(--claude); }
+  .wbtns { margin-left: auto; display: flex; height: 100%; }
+  .wbtn { width: 44px; height: 100%; display: flex; align-items: center; justify-content: center; color: var(--inactive); transition: background .12s; }
+  .wbtn:hover { background: rgba(128,128,128,.18); }
+  .wbtn.close:hover { background: #e81123; color: #fff; }
+  .wbtn svg { width: 11px; height: 11px; }
+
+  .screen { padding: 16px; font-size: 13px; }
+  .line { margin: 3px 0; white-space: pre-wrap; word-break: break-word; }
+  .claude   { color: var(--claude); }
+  .text     { color: var(--text); }
+  .inactive { color: var(--inactive); }
+  .subtle   { color: var(--subtle); }
+  .suggest  { color: var(--suggestion); font-style: italic; }
+  .error    { color: var(--error); }
+  .success  { color: var(--success); }
+  .warning  { color: var(--warning); }
+  .remember { color: var(--remember); }
+
+  .banner { border: 1px solid var(--claude); border-radius: 6px; padding: 10px 14px; margin-bottom: 14px; color: var(--claude); }
+  .usermsg { background: var(--userMessageBackground); border-left: 4px solid var(--claude); padding: 8px 12px; margin: 10px 0; border-radius: 0 4px 4px 0; color: var(--text); }
+  .perm { border: 1px solid var(--permission); border-radius: 6px; padding: 10px 14px; margin: 12px 0; color: var(--text); }
+  .perm .h { color: var(--permission); margin-bottom: 6px; }
+  .perm .opt b { color: var(--permission); }
+  .diff { background: rgba(128,128,128,.06); border-radius: 4px; padding: 8px 12px; margin: 10px 0; }
+  .diff .add { color: var(--diffAdded); }
+  .diff .rem { color: var(--diffRemoved); }
+  .diff .ctx { color: var(--subtle); }
+  .planbox { border: 1px dashed var(--planMode); border-radius: 6px; padding: 10px 14px; margin: 12px 0; }
+  .planbox .h { color: var(--planMode); margin-bottom: 6px; }
+  .prompt { display: flex; gap: 8px; margin-top: 14px; align-items: baseline; }
+  .prompt .caret { color: var(--claude); }
+  .prompt .cursor { color: var(--text); animation: blink 1s step-end infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* ---------- RIGHT: editor ---------- */
+  .right { flex: 1 1 45%; max-width: 460px; background: #1c1c24; border-left: 1px solid #2c2c38; display: flex; flex-direction: column; }
+  .rhead { padding: 14px 16px; border-bottom: 1px solid #2c2c38; }
+  .toprow { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .rhead h1 { font-size: 14px; font-weight: 600; color: #eee; flex: 1; }
+  .toggle { display: flex; border: 1px solid #3a3a48; border-radius: 6px; overflow: hidden; }
+  .toggle button {
+    font-family: inherit; font-size: 11px; cursor: pointer; padding: 4px 10px;
+    border: none; background: #22222c; color: #999; transition: all .12s;
+  }
+  .toggle button.on { background: var(--claude, #13F4FB); color: #000; font-weight: 600; }
+  .field { display: flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 12px; }
+  .field label { color: #999; width: 46px; }
+  .field input[type=text], .field select {
+    flex: 1; background: #12121a; border: 1px solid #333; color: #ddd;
+    padding: 5px 8px; border-radius: 4px; font-family: inherit; font-size: 12px;
+  }
+  .rlist { flex: 1; overflow-y: auto; padding: 8px 16px 16px; }
+  .grp { margin-top: 14px; }
+  .grp > .gh {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .5px;
+    color: #6a6a7a; margin-bottom: 6px; cursor: pointer; user-select: none;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .grp > .gh .arw { transition: transform .15s; }
+  .grp.collapsed .gh .arw { transform: rotate(-90deg); }
+  .grp.collapsed .rows { display: none; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
+  .row input[type=color] {
+    width: 34px; height: 26px; padding: 0; border: 1px solid #444;
+    border-radius: 5px; background: none; cursor: pointer; flex-shrink: 0;
+  }
+  .row input[type=color]::-webkit-color-swatch-wrapper { padding: 2px; }
+  .row input[type=color]::-webkit-color-swatch { border: none; border-radius: 3px; }
+  .row .nm { flex: 1; font-size: 12px; color: #cfcfda; word-break: break-all; }
+  .row .nm small { display: block; color: #6a6a7a; font-size: 10px; }
+  .row .warn { color: #e5a13a; }
+  .row input[type=text] {
+    width: 80px; background: #12121a; border: 1px solid #333; color: #ddd;
+    padding: 4px 6px; border-radius: 4px; font-family: inherit; font-size: 11px; text-transform: uppercase; flex-shrink: 0;
+  }
+  .rfoot { padding: 12px 16px; border-top: 1px solid #2c2c38; display: flex; flex-direction: column; gap: 8px; }
+  .rfoot button {
+    font-family: inherit; font-size: 13px; cursor: pointer; padding: 9px;
+    border-radius: 6px; border: none; background: var(--claude, #13F4FB); color: #000; font-weight: 600; transition: opacity .15s;
+  }
+  .rfoot button:hover { opacity: .85; }
+  .rfoot .sub { display: flex; gap: 8px; }
+  .rfoot .sub button { flex: 1; background: #2a2a36; color: #ccc; font-weight: 400; }
+  .rfoot textarea {
+    width: 100%; height: 110px; background: #0e0e14; border: 1px solid #2c2c38;
+    color: #9fe; font-family: ui-monospace, monospace; font-size: 11px; padding: 8px; border-radius: 6px; resize: vertical;
+  }
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: #2a7d4f; color: #fff; padding: 8px 16px; border-radius: 6px;
+    font-size: 12px; opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .toast.show { opacity: 1; }
+  .hint { font-size: 10px; color: #6a6a7a; margin-top: 2px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- LEFT -->
+  <div class="left">
+    <div class="term" id="term">
+      <div class="titlebar">
+        <span class="t"><span class="ico">✳</span> claude ~ ~/projects/demo</span>
+        <div class="wbtns">
+          <div class="wbtn"><svg viewBox="0 0 11 11"><line x1="0" y1="5.5" x2="11" y2="5.5" stroke="currentColor" stroke-width="1"/></svg></div>
+          <div class="wbtn"><svg viewBox="0 0 11 11"><rect x="0.5" y="0.5" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1"/></svg></div>
+          <div class="wbtn close"><svg viewBox="0 0 11 11"><line x1="0" y1="0" x2="11" y2="11" stroke="currentColor" stroke-width="1"/><line x1="11" y1="0" x2="0" y2="11" stroke="currentColor" stroke-width="1"/></svg></div>
+        </div>
+      </div>
+      <div class="screen">
+        <div class="banner">✳ Claude Code v2.1 · <span class="subtle">~/projects/demo</span></div>
+        <div class="usermsg text" id="pv-user">帮我改一下这个主题的配色</div>
+        <div class="line"><span class="claude">✳ Claude</span> <span class="text" id="pv-reply">好的,我来调整。</span></div>
+        <div class="line inactive" id="pv-read">  ⎿ 读取 settings.json…</div>
+        <div class="line"><span class="success">✔</span> <span class="text" id="pv-found">找到 theme:</span> <span class="claude">custom:my-style</span></div>
+        <div class="perm">
+          <div class="h" id="pv-perm">⚠ 权限确认</div>
+          <div class="text">Edit  src/theme.ts</div>
+          <div class="opt inactive" id="pv-opt">❯ <b>1.</b> Yes　　<b>2.</b> Yes, allow all　　<b>3.</b> No</div>
+        </div>
+        <div class="diff">
+          <div class="ctx">  src/theme.ts</div>
+          <div class="rem">- base: "light"</div>
+          <div class="add">+ base: "dark"</div>
+        </div>
+        <div class="planbox">
+          <div class="h" id="pv-plan">⏸ Plan mode</div>
+          <div class="text" id="pv-plansteps">1. 读取当前 theme  2. 应用新配色  3. 验证</div>
+        </div>
+        <div class="line"><span class="remember">◆</span> <span class="inactive" id="pv-mem">已记忆:用户偏好 dark 主题</span></div>
+        <div class="line"><span class="warning">⚠</span> <span class="inactive" id="pv-warn">未提交的更改</span></div>
+        <div class="line"><span class="error">✘</span> <span class="inactive" id="pv-err">test failed: auth.spec.ts:42</span></div>
+        <div class="prompt">
+          <span class="caret">❯</span><span class="text" id="pv-prompt">试试其他配色</span>
+          <span class="suggest" id="pv-sugg"> 按 Tab 补全…</span><span class="cursor">▋</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right">
+    <div class="rhead">
+      <div class="toprow">
+        <h1 id="ui-title">🎨 CC 主题编辑器</h1>
+        <div class="toggle" id="mode-toggle">
+          <button data-mode="simple" class="on" id="ui-simple">简单</button>
+          <button data-mode="full" id="ui-full">完整</button>
+        </div>
+        <div class="toggle" id="lang-toggle">
+          <button data-lang="zh" class="on">中</button>
+          <button data-lang="en">EN</button>
+        </div>
+      </div>
+      <div class="field"><label>name</label><input type="text" id="f-name" value="My Theme"></div>
+      <div class="field"><label>base</label>
+        <select id="f-base"><option value="dark">dark</option><option value="light">light</option></select>
+      </div>
+      <div class="hint" id="ui-modehint"></div>
+    </div>
+    <div class="rlist" id="rlist"></div>
+    <div class="rfoot">
+      <button id="btn-copy">📋 复制 JSON 到剪贴板</button>
+      <div class="sub">
+        <button id="btn-save">💾 下载 .json</button>
+        <button id="btn-reset">↺ 重置</button>
+      </div>
+      <textarea id="json-out" readonly></textarea>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ i18n UI 文案 ============
+const T = {
+  zh: {
+    title: "🎨 CC 主题编辑器", simple: "简单", full: "完整",
+    modehintSimple: "简单模式:15 个常用键。切「完整」看全部 72 个。",
+    modehintFull: "完整模式:全部 72 个 token。⚠ 标记的有已知问题。",
+    copy: "📋 复制 JSON 到剪贴板", save: "💾 下载 .json", reset: "↺ 重置",
+    copied: "已复制到剪贴板 ✔", copiedFb: "已复制(兼容模式)✔", saved: "已下载 ",
+    didReset: "已重置",
+    pv: { user: "帮我改一下这个主题的配色", reply: "好的,我来调整。",
+      read: "  ⎿ 读取 settings.json…", found: "找到 theme:", perm: "⚠ 权限确认",
+      opt: '❯ <b>1.</b> 是　　<b>2.</b> 是,全部允许　　<b>3.</b> 否', plan: "⏸ Plan 模式",
+      plansteps: "1. 读取当前 theme  2. 应用新配色  3. 验证", mem: "已记忆:用户偏好 dark 主题",
+      warn: "有未提交的更改", err: "test failed: auth.spec.ts:42", prompt: "试试其他配色", sugg: " 按 Tab 补全…" }
+  },
+  en: {
+    title: "🎨 CC Theme Editor", simple: "Simple", full: "Full",
+    modehintSimple: "Simple: 15 common keys. Switch to Full for all 72.",
+    modehintFull: "Full: all 72 tokens. Keys marked ⚠ have known issues.",
+    copy: "📋 Copy JSON to clipboard", save: "💾 Download .json", reset: "↺ Reset",
+    copied: "Copied to clipboard ✔", copiedFb: "Copied (fallback) ✔", saved: "Downloaded ",
+    didReset: "Reset done",
+    pv: { user: "Help me tweak this theme's colors", reply: "Sure, adjusting now.",
+      read: "  ⎿ reading settings.json…", found: "theme found:", perm: "⚠ Permission",
+      opt: '❯ <b>1.</b> Yes　　<b>2.</b> Yes, allow all　　<b>3.</b> No', plan: "⏸ Plan mode",
+      plansteps: "1. Read theme  2. Apply colors  3. Verify", mem: "Remembered: user prefers dark theme",
+      warn: "uncommitted changes", err: "test failed: auth.spec.ts:42", prompt: "try other colors", sugg: " press Tab to complete…" }
+  }
+};
+
+// ============ 全部 72 token ============
+// [key, enDesc, zhDesc, default, flags]  flags: "s"=简单模式包含  "w"=已知问题
+const GROUPS = [
+  { en:"Brand / Accent", zh:"品牌 / 强调色", tokens: [
+    ["claude","Primary brand / Claude label / cursor","主色 / Claude 名 / 光标","#13F4FB","s"],
+    ["claudeShimmer","Lighter gradient partner to claude","claude 渐变亮色伙伴","#7FFFFF",""],
+    ["claudeBlue_FOR_SYSTEM_SPINNER","Blue brand variant for system spinner","系统 spinner 蓝","#4A9EFF",""],
+    ["claudeBlueShimmer_FOR_SYSTEM_SPINNER","Shimmer paired with blue spinner","蓝 spinner 渐变","#A0CFFF",""],
+    ["professionalBlue","Anthropic-blue for login / billing","登录/账单 蓝","#2A6FDB",""],
+    ["chromeYellow","Yellow marketing accent","营销黄","#FFD400",""],
+  ]},
+  { en:"Text", zh:"文字", tokens: [
+    ["text","Default foreground text (incl. user msg)","正文文字(含用户消息)","#18ECA5","s"],
+    ["inverseText","Text on colored backgrounds / badges","反色文字 / 徽章上文字","#000000","s"],
+    ["inactive","Hints / timestamps / disabled","次要 / 灰字 / 时间戳","#A0A0A0","s"],
+    ["inactiveShimmer","Shimmer partner to inactive","inactive 渐变","#C8C8C8",""],
+    ["subtle","Faint borders / de-emphasized text","更淡的辅助字 / 细边","#666666","s"],
+    ["suggestion","Autocomplete hints","补全建议","#FF00FF","s"],
+    ["remember","Memory / CLAUDE.md indicator","已记忆 / CLAUDE.md ◆","#39FF14","s"],
+    ["background","Generic surface background","通用背景填充","#0D0D14",""],
+  ]},
+  { en:"Status", zh:"语义状态", tokens: [
+    ["success","Success / passing checks","成功 / ✔","#39FF14","s"],
+    ["error","Errors / failures","错误 / 失败","#FF0033","s"],
+    ["warning","Warnings / auto-mode border","警告 / auto 边框","#FFD700","s"],
+    ["warningShimmer","Gradient partner to warning","warning 渐变","#FFEA80",""],
+    ["merged","Merged PR indicator","PR 已合并指示","#A371F7",""],
+  ]},
+  { en:"Input Box / Mode", zh:"输入框 / 模式指示", tokens: [
+    ["promptBorder","Input box border (default)","输入框边框(默认)","#13F4FB",""],
+    ["promptBorderShimmer","Shimmer paired with prompt border","输入框边框渐变","#7FFFFF",""],
+    ["permission","Permission prompts / picker","权限确认框 / 选择器","#FFD700","s"],
+    ["permissionShimmer","Shimmer paired with permission","permission 渐变","#FFEA80",""],
+    ["planMode","Plan mode accent / border","Plan mode 强调/边框","#FF6B00","s"],
+    ["autoAccept","accept-edits mode accent","accept-edits 模式","#39FF14",""],
+    ["autoAcceptShimmer","Shimmer paired with autoAccept","autoAccept 渐变","#A0FF90",""],
+    ["skill","Skill-invocation accent","skill 调用","#39FF14",""],
+    ["effortUltra","Ultra effort / thinking indicator","ultra effort/思考","#FF00FF",""],
+    ["bashBorder","Input border for shell command","输入 shell 命令时边框","#FF6B00",""],
+    ["ide","IDE connection indicator","IDE 连接指示","#13F4FB",""],
+    ["fastMode","Fast mode indicator","fast mode 指示","#FFD700",""],
+    ["fastModeShimmer","Shimmer paired with fastMode","fastMode 渐变","#FFEA80",""],
+  ]},
+  { en:"Diff ⚠ (bug #71543)", zh:"Diff 渲染 ⚠(bug #71543)", tokens: [
+    ["diffAdded","Background of added lines","新增行底色","#B7FF00","sw"],
+    ["diffRemoved","Background of removed lines","删除行底色","#FF4747","sw"],
+    ["diffAddedDimmed","Context near additions","新增附近上下文","#5A7A00","w"],
+    ["diffRemovedDimmed","Context near removals","删除附近上下文","#7A4A00","w"],
+    ["diffAddedWord","Word-level highlight (added)","新增行词级高亮","#D4FF4D","w"],
+    ["diffRemovedWord","Word-level highlight (removed)","删除行词级高亮","#FFB84D","w"],
+  ]},
+  { en:"Fullscreen Backgrounds", zh:"全屏模式背景", tokens: [
+    ["userMessageBackground","Background behind user messages","用户消息底色","#D568E3","s"],
+    ["userMessageBackgroundHover","Hover variant of user msg bg","用户消息 hover","#C04FCF",""],
+    ["composerSidebarBackground","Fullscreen composer sidebar fill","全屏 composer 侧栏","#12121F",""],
+    ["messageActionsBackground","Removed since v2.1.140 (ignored)","v2.1.140 已移除","#1A1A28","w"],
+    ["bashMessageBackgroundColor","Background for shell-command msgs","shell 消息背景","#1A1A28",""],
+    ["memoryBackgroundColor","Background for memory annotations","记忆批注背景","#1A2818",""],
+    ["selectionBg","Mouse-selection background","鼠标选中背景","#4E85BC",""],
+  ]},
+  { en:"Subagent Palette", zh:"子代理调色板", tokens: [
+    ["red_FOR_SUBAGENTS_ONLY","Subagent red","子代理 红","#FF5555",""],
+    ["blue_FOR_SUBAGENTS_ONLY","Subagent blue","子代理 蓝","#4A9EFF",""],
+    ["green_FOR_SUBAGENTS_ONLY","Subagent green","子代理 绿","#50FA7B",""],
+    ["yellow_FOR_SUBAGENTS_ONLY","Subagent yellow","子代理 黄","#F1FA8C",""],
+    ["purple_FOR_SUBAGENTS_ONLY","Subagent purple","子代理 紫","#BD93F9",""],
+    ["orange_FOR_SUBAGENTS_ONLY","Subagent orange","子代理 橙","#FFB86C",""],
+    ["pink_FOR_SUBAGENTS_ONLY","Subagent pink","子代理 粉","#FF79C6",""],
+    ["cyan_FOR_SUBAGENTS_ONLY","Subagent cyan","子代理 青","#8BE9FD",""],
+  ]},
+  { en:"Rate-Limit Bar", zh:"速率限制条", tokens: [
+    ["rate_limit_fill","Filled portion of usage bar","用量条已填充","#39FF14",""],
+    ["rate_limit_empty","Empty portion of usage bar","用量条空白","#333333",""],
+  ]},
+  { en:"Brief Mode", zh:"Brief 紧凑模式", tokens: [
+    ["briefLabelYou",'"You" label in compact transcript','"You" 标签',"#FFD400",""],
+    ["briefLabelClaude",'"Claude" label in compact transcript','"Claude" 标签',"#13F4FB",""],
+  ]},
+  { en:"Clawd Mascot", zh:"吉祥物彩蛋 Clawd", tokens: [
+    ["clawd_body","Body color for Clawd mascot","Clawd 身体","#F42FBF",""],
+    ["clawd_background","Background behind Clawd","Clawd 背景","#7575EA",""],
+  ]},
+  { en:"Rainbow (celebration)", zh:"彩虹调色板(庆祝动画)", tokens: [
+    ["rainbow_red","Rainbow red","红","#FF0000",""],
+    ["rainbow_red_shimmer","Rainbow red shimmer","红 渐变","#FF6666",""],
+    ["rainbow_orange","Rainbow orange","橙","#FF8800",""],
+    ["rainbow_orange_shimmer","Rainbow orange shimmer","橙 渐变","#FFBB66",""],
+    ["rainbow_yellow","Rainbow yellow","黄","#FFEE00",""],
+    ["rainbow_yellow_shimmer","Rainbow yellow shimmer","黄 渐变","#FFF566",""],
+    ["rainbow_green","Rainbow green","绿","#00FF44",""],
+    ["rainbow_green_shimmer","Rainbow green shimmer","绿 渐变","#66FF99",""],
+    ["rainbow_blue","Rainbow blue","蓝","#0088FF",""],
+    ["rainbow_blue_shimmer","Rainbow blue shimmer","蓝 渐变","#66BBFF",""],
+    ["rainbow_indigo","Rainbow indigo","靛","#4400FF",""],
+    ["rainbow_indigo_shimmer","Rainbow indigo shimmer","靛 渐变","#9966FF",""],
+    ["rainbow_violet","Rainbow violet","紫","#AA00FF",""],
+    ["rainbow_violet_shimmer","Rainbow violet shimmer","紫 渐变","#CC66FF",""],
+  ]},
+];
+
+const PREVIEW_BG = { dark: { bg:"#0d0d14", border:"#333", titlebar:"#12121f" },
+                     light:{ bg:"#ffffff", border:"#e0e0e0", titlebar:"#f2f2f2" } };
+
+const DEFAULTS = {};
+GROUPS.forEach(g => g.tokens.forEach(t => DEFAULTS[t[0]] = t[3]));
+const state = { ...DEFAULTS };
+let lang = "zh", mode = "simple";
+const term = document.getElementById("term");
+const $ = id => document.getElementById(id);
+
+function applyPreview() {
+  for (const k in state) term.style.setProperty("--"+k, state[k]);
+  const bg = PREVIEW_BG[$("f-base").value];
+  for (const k in bg) term.style.setProperty("--"+k, bg[k]);
+  document.documentElement.style.setProperty("--claude", state.claude);
+  refreshJSON();
+}
+function refreshJSON() {
+  const overrides = {};
+  GROUPS.forEach(g => g.tokens.forEach(t => overrides[t[0]] = state[t[0]]));  // 始终导出全部 72
+  $("json-out").value = JSON.stringify(
+    { name: $("f-name").value || "My Theme", base: $("f-base").value, overrides }, null, 2);
+}
+function buildRows() {
+  const list = $("rlist"); list.innerHTML = "";
+  GROUPS.forEach((g, gi) => {
+    const toks = mode === "simple" ? g.tokens.filter(t => t[4].includes("s")) : g.tokens;
+    if (!toks.length) return;  // 简单模式跳过空组
+    const grp = document.createElement("div");
+    grp.className = (mode === "full" && gi >= 6) ? "grp collapsed" : "grp";
+    const gh = document.createElement("div");
+    gh.className = "gh";
+    gh.innerHTML = `<span class="arw">▼</span> ${lang==="zh"?g.zh:g.en}`;
+    gh.onclick = () => grp.classList.toggle("collapsed");
+    grp.appendChild(gh);
+    const rows = document.createElement("div"); rows.className = "rows";
+    toks.forEach(t => {
+      const [k, en, zh, , flags] = t;
+      const warn = flags.includes("w");
+      const desc = lang === "zh" ? zh : en;
+      const row = document.createElement("div"); row.className = "row";
+      row.innerHTML =
+        `<input type="color" value="${state[k]}" data-k="${k}">
+         <span class="nm">${warn?'<span class="warn">⚠ </span>':''}${k}<small>${desc}</small></span>
+         <input type="text" value="${state[k]}" data-k="${k}" maxlength="7">`;
+      rows.appendChild(row);
+    });
+    grp.appendChild(rows); list.appendChild(grp);
+  });
+  list.querySelectorAll('input[type=color]').forEach(inp => inp.oninput = e => {
+    const k = e.target.dataset.k; state[k] = e.target.value.toUpperCase();
+    const tx = list.querySelector(`input[type=text][data-k="${k}"]`); if (tx) tx.value = state[k];
+    applyPreview();
+  });
+  list.querySelectorAll('input[type=text]').forEach(inp => inp.oninput = e => {
+    let v = e.target.value.trim(); if (!/^#/.test(v)) v = "#"+v;
+    if (!/^#[0-9a-fA-F]{6}$/.test(v)) return;
+    const k = e.target.dataset.k; state[k] = v.toUpperCase();
+    const c = list.querySelector(`input[type=color][data-k="${k}"]`); if (c) c.value = v;
+    applyPreview();
+  });
+}
+function applyLang() {
+  const t = T[lang];
+  document.documentElement.lang = lang;
+  $("ui-title").textContent = t.title;
+  $("ui-simple").textContent = t.simple; $("ui-full").textContent = t.full;
+  $("ui-modehint").textContent = mode === "simple" ? t.modehintSimple : t.modehintFull;
+  $("btn-copy").textContent = t.copy; $("btn-save").textContent = t.save; $("btn-reset").textContent = t.reset;
+  const p = t.pv;
+  $("pv-user").textContent = p.user; $("pv-reply").textContent = p.reply;
+  $("pv-read").textContent = p.read; $("pv-found").textContent = p.found;
+  $("pv-perm").textContent = p.perm; $("pv-opt").innerHTML = p.opt;
+  $("pv-plan").textContent = p.plan; $("pv-plansteps").textContent = p.plansteps;
+  $("pv-mem").textContent = p.mem; $("pv-warn").textContent = p.warn;
+  $("pv-err").textContent = p.err; $("pv-prompt").textContent = p.prompt; $("pv-sugg").textContent = p.sugg;
+}
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 1600);
+}
+
+// ---- toggles ----
+$("mode-toggle").onclick = e => {
+  const b = e.target.closest("button"); if (!b) return;
+  mode = b.dataset.mode;
+  $("mode-toggle").querySelectorAll("button").forEach(x => x.classList.toggle("on", x.dataset.mode === mode));
+  $("ui-modehint").textContent = mode === "simple" ? T[lang].modehintSimple : T[lang].modehintFull;
+  buildRows();
+};
+$("lang-toggle").onclick = e => {
+  const b = e.target.closest("button"); if (!b) return;
+  lang = b.dataset.lang;
+  $("lang-toggle").querySelectorAll("button").forEach(x => x.classList.toggle("on", x.dataset.lang === lang));
+  applyLang(); buildRows();
+};
+
+// ---- footer buttons ----
+$("btn-copy").onclick = async () => {
+  const txt = $("json-out").value;
+  try { await navigator.clipboard.writeText(txt); toast(T[lang].copied); }
+  catch { $("json-out").select(); document.execCommand("copy"); toast(T[lang].copiedFb); }
+};
+$("btn-save").onclick = () => {
+  const name = ($("f-name").value || "my-theme").toLowerCase().replace(/\s+/g,"-");
+  const blob = new Blob([$("json-out").value], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = name + ".json"; a.click();
+  URL.revokeObjectURL(a.href); toast(T[lang].saved + name + ".json");
+};
+$("btn-reset").onclick = () => { Object.assign(state, DEFAULTS); buildRows(); applyPreview(); toast(T[lang].didReset); };
+$("f-name").oninput = refreshJSON;
+$("f-base").onchange = applyPreview;
+
+applyLang(); buildRows(); applyPreview();
+</script>
+</body>
+</html>

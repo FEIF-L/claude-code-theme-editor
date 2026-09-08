@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code Themes</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: ui-monospace, "Cascadia Code", "Consolas", monospace;
+    background: #1a1a1a;
+    color: #ccc;
+    padding: 24px;
+    line-height: 1.5;
+    transition: background .2s;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 15px; color: #888; font-weight: normal; margin-bottom: 16px; }
+  .themebar {
+    display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px;
+  }
+  .themebar button {
+    font-family: inherit; font-size: 12px; cursor: pointer;
+    padding: 6px 12px; border-radius: 6px;
+    border: 1px solid #444; background: #2a2a2a; color: #bbb;
+    transition: all .15s;
+  }
+  .themebar button:hover { border-color: #666; }
+  .themebar button.active { border-color: var(--claude); color: var(--claude); box-shadow: 0 0 0 1px var(--claude); }
+  .themebar button .cur { font-size: 10px; opacity: .6; }
+
+  /* Terminal window */
+  .term {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0,0,0,.4);
+    font-family: "Segoe UI", ui-monospace, "Cascadia Code", "Consolas", monospace;
+  }
+  .titlebar {
+    background: var(--titlebar);
+    padding: 0 0 0 12px;
+    display: flex; align-items: center;
+    border-bottom: 1px solid var(--border);
+    height: 34px;
+  }
+  .titlebar .t { font-size: 12px; color: var(--inactive); display: flex; align-items: center; gap: 6px; }
+  .titlebar .t .ico { color: var(--claude); }
+  .wbtns { margin-left: auto; display: flex; height: 100%; }
+  .wbtn {
+    width: 44px; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--inactive); font-size: 11px;
+    transition: background .12s;
+  }
+  .wbtn:hover { background: rgba(128,128,128,.18); }
+  .wbtn.close:hover { background: #e81123; color: #fff; }
+  .wbtn svg { width: 11px; height: 11px; }
+
+  .screen { padding: 16px; font-size: 13px; min-height: 480px; }
+  .line { margin: 2px 0; white-space: pre-wrap; word-break: break-word; }
+
+  .claude   { color: var(--claude); }
+  .text     { color: var(--text); }
+  .inactive { color: var(--inactive); }
+  .subtle   { color: var(--subtle); }
+  .suggest  { color: var(--suggestion); font-style: italic; }
+  .error    { color: var(--error); }
+  .success  { color: var(--success); }
+  .warning  { color: var(--warning); }
+  .remember { color: var(--remember); }
+  .plan     { color: var(--planMode); }
+
+  .banner {
+    border: 1px solid var(--claude); border-radius: 6px;
+    padding: 10px 14px; margin-bottom: 14px; color: var(--claude);
+  }
+  .usermsg {
+    background: var(--userMessageBackground);
+    border-left: 4px solid var(--userMsgBorder, var(--claude));
+    padding: 8px 12px; margin: 10px 0; border-radius: 0 4px 4px 0;
+    color: var(--userMsgText, var(--text));
+  }
+  .perm {
+    border: 1px solid var(--permission); border-radius: 6px;
+    padding: 10px 14px; margin: 12px 0; color: var(--text);
+  }
+  .perm .h { color: var(--permission); margin-bottom: 6px; }
+  .perm .opt { color: var(--inactive); }
+  .perm .opt b { color: var(--permission); }
+
+  .diff { background: rgba(128,128,128,.06); border-radius: 4px; padding: 8px 12px; margin: 10px 0; }
+  .diff .add { color: var(--diffAdded); }
+  .diff .rem { color: var(--diffRemoved); }
+  .diff .ctx { color: var(--subtle); }
+
+  .planbox { border: 1px dashed var(--planMode); border-radius: 6px; padding: 10px 14px; margin: 12px 0; }
+  .planbox .h { color: var(--planMode); margin-bottom: 6px; }
+
+  .prompt { display: flex; gap: 8px; margin-top: 14px; align-items: baseline; }
+  .prompt .caret { color: var(--claude); }
+  .prompt .cursor { color: var(--text); animation: blink 1s step-end infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .swatches { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; }
+  .sw { display: flex; align-items: center; gap: 5px; font-size: 10px; color: #888; }
+  .sw i { width: 13px; height: 13px; border-radius: 3px; display: inline-block; border: 1px solid rgba(128,128,128,.3); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>// Claude Code — theme 配色预览</h1>
+  <div class="themebar" id="bar"></div>
+
+  <div class="term" id="term">
+    <div class="titlebar">
+      <span class="t"><span class="ico">✳</span> claude ~ ~/projects/demo — <span id="tname">Neon High Contrast</span></span>
+      <div class="wbtns">
+        <div class="wbtn"><svg viewBox="0 0 11 11"><line x1="0" y1="5.5" x2="11" y2="5.5" stroke="currentColor" stroke-width="1"/></svg></div>
+        <div class="wbtn"><svg viewBox="0 0 11 11"><rect x="0.5" y="0.5" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1"/></svg></div>
+        <div class="wbtn close"><svg viewBox="0 0 11 11"><line x1="0" y1="0" x2="11" y2="11" stroke="currentColor" stroke-width="1"/><line x1="11" y1="0" x2="0" y2="11" stroke="currentColor" stroke-width="1"/></svg></div>
+      </div>
+    </div>
+    <div class="screen">
+      <div class="banner">✳ Claude Code v2.1 · <span class="subtle">~/projects/demo</span></div>
+
+      <div class="usermsg text">给我看下目前的 claudecode 的 theme 设置</div>
+
+      <div class="line"><span class="claude">✳ Claude</span> <span class="text">我来看看当前配置。</span></div>
+      <div class="line inactive">  ⎿ 读取 settings.json…</div>
+      <div class="line"><span class="success">✔</span> <span class="text">找到 theme: </span><span class="claude">custom:my-style</span></div>
+
+      <div class="perm">
+        <div class="h">⚠ 权限确认</div>
+        <div class="text">Edit  src/theme.ts</div>
+        <div class="opt">❯ <b>1.</b> Yes　　<b>2.</b> Yes, 允许全部　　<b>3.</b> No</div>
+      </div>
+
+      <div class="diff">
+        <div class="ctx">  src/theme.ts</div>
+        <div class="rem">- base: "light"</div>
+        <div class="add">+ base: "dark"</div>
+        <div class="ctx">  overrides: {}</div>
+      </div>
+
+      <div class="planbox">
+        <div class="h">⏸ Plan mode</div>
+        <div class="text">1. 读取当前 theme  2. 生成预览 HTML  3. 追加多组配色</div>
+      </div>
+
+      <div class="line"><span class="remember">◆ 已记忆</span> <span class="inactive">用户偏好 dark 主题</span></div>
+      <div class="line"><span class="warning">⚠ warning</span> <span class="inactive">未提交的更改</span></div>
+      <div class="line"><span class="error">✘ error</span> <span class="inactive">test failed: auth.spec.ts:42</span></div>
+
+      <div class="prompt">
+        <span class="caret">❯</span>
+        <span class="text">试试其他配色</span>
+        <span class="suggest"> 按 Tab 补全…</span>
+        <span class="cursor">▋</span>
+      </div>
+
+      <div class="swatches" id="sw"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const THEMES = {
+  "Neon High Contrast": { _current: true, base:"dark",
+    bg:"#0d0d14", border:"#333", titlebar:"#12121f",
+    claude:"#00F5FF", text:"#FFFFFF", inverseText:"#000000", inactive:"#A0A0A0", subtle:"#666666",
+    suggestion:"#FF00FF", permission:"#FFD700", remember:"#39FF14", error:"#FF0033",
+    success:"#39FF14", warning:"#FFD700", diffAdded:"#B8FF00", diffRemoved:"#FF9500",
+    userMessageBackground:"#FFD400", userMsgText:"#1a1400", userMsgBorder:"#7a5c00", planMode:"#FF6B00" },
+
+  "Dark (默认)": { base:"dark",
+    bg:"#1a1a1a", border:"#2f2f2f", titlebar:"#222",
+    claude:"#D97757", text:"#e6e6e6", inverseText:"#000", inactive:"#888", subtle:"#5a5a5a",
+    suggestion:"#7d7d7d", permission:"#b58900", remember:"#4ec9b0", error:"#e06c75",
+    success:"#98c379", warning:"#e5c07b", diffAdded:"#3fb950", diffRemoved:"#f85149",
+    userMessageBackground:"#202020", planMode:"#a371f7" },
+
+  "Light": { base:"light",
+    bg:"#ffffff", border:"#e0e0e0", titlebar:"#f2f2f2",
+    claude:"#c15f3c", text:"#1a1a1a", inverseText:"#fff", inactive:"#999", subtle:"#bbb",
+    suggestion:"#aaa", permission:"#b8860b", remember:"#0e8a6e", error:"#d1242f",
+    success:"#1a7f37", warning:"#9a6700", diffAdded:"#116329", diffRemoved:"#cf222e",
+    userMessageBackground:"#f5f5f5", planMode:"#8250df" },
+
+  "Solarized Dark": { base:"dark",
+    bg:"#002b36", border:"#0a3d47", titlebar:"#073642",
+    claude:"#268bd2", text:"#93a1a1", inverseText:"#002b36", inactive:"#586e75", subtle:"#465c63",
+    suggestion:"#6c71c4", permission:"#b58900", remember:"#2aa198", error:"#dc322f",
+    success:"#859900", warning:"#cb4b16", diffAdded:"#859900", diffRemoved:"#dc322f",
+    userMessageBackground:"#073642", planMode:"#6c71c4" },
+
+  "Dracula": { base:"dark",
+    bg:"#282a36", border:"#3a3d4d", titlebar:"#21222c",
+    claude:"#bd93f9", text:"#f8f8f2", inverseText:"#282a36", inactive:"#6272a4", subtle:"#4b5474",
+    suggestion:"#ff79c6", permission:"#f1fa8c", remember:"#8be9fd", error:"#ff5555",
+    success:"#50fa7b", warning:"#ffb86c", diffAdded:"#50fa7b", diffRemoved:"#ff5555",
+    userMessageBackground:"#21222c", planMode:"#bd93f9" },
+
+  "Gruvbox": { base:"dark",
+    bg:"#282828", border:"#3c3836", titlebar:"#1d2021",
+    claude:"#fabd2f", text:"#ebdbb2", inverseText:"#282828", inactive:"#928374", subtle:"#665c54",
+    suggestion:"#d3869b", permission:"#fe8019", remember:"#8ec07c", error:"#fb4934",
+    success:"#b8bb26", warning:"#fabd2f", diffAdded:"#b8bb26", diffRemoved:"#fb4934",
+    userMessageBackground:"#32302f", planMode:"#d3869b" },
+
+  "Tokyo Night": { base:"dark",
+    bg:"#1a1b26", border:"#2a2e42", titlebar:"#16161e",
+    claude:"#7aa2f7", text:"#c0caf5", inverseText:"#1a1b26", inactive:"#565f89", subtle:"#414868",
+    suggestion:"#bb9af7", permission:"#e0af68", remember:"#7dcfff", error:"#f7768e",
+    success:"#9ece6a", warning:"#e0af68", diffAdded:"#9ece6a", diffRemoved:"#f7768e",
+    userMessageBackground:"#16161e", planMode:"#bb9af7" },
+
+  "Nord": { base:"dark",
+    bg:"#2e3440", border:"#3b4252", titlebar:"#272c36",
+    claude:"#88c0d0", text:"#eceff4", inverseText:"#2e3440", inactive:"#4c566a", subtle:"#434c5e",
+    suggestion:"#b48ead", permission:"#ebcb8b", remember:"#8fbcbb", error:"#bf616a",
+    success:"#a3be8c", warning:"#d08770", diffAdded:"#a3be8c", diffRemoved:"#bf616a",
+    userMessageBackground:"#272c36", planMode:"#b48ead" }
+};
+
+const SW_KEYS = ["claude","text","suggestion","permission","remember","error","success","warning","diffAdded","diffRemoved","planMode"];
+
+function apply(name) {
+  const t = THEMES[name];
+  const term = document.getElementById("term");
+  term.style.removeProperty("--userMsgText");
+  term.style.removeProperty("--userMsgBorder");
+  for (const k in t) if (k[0] !== "_") term.style.setProperty("--"+k, t[k]);
+  document.body.style.background = t.base === "light" ? "#eaeaea" : "#1a1a1a";
+  document.getElementById("tname").textContent = name;
+  document.querySelectorAll("#bar button").forEach(b =>
+    b.classList.toggle("active", b.dataset.n === name));
+  // swatches
+  document.getElementById("sw").innerHTML = SW_KEYS.map(k =>
+    `<span class="sw"><i style="background:${t[k]}"></i>${k}</span>`).join("");
+}
+
+const bar = document.getElementById("bar");
+for (const name in THEMES) {
+  const b = document.createElement("button");
+  b.dataset.n = name;
+  b.innerHTML = name + (THEMES[name]._current ? ' <span class="cur">(当前)</span>' : "");
+  b.onclick = () => apply(name);
+  bar.appendChild(b);
+}
+apply("Neon High Contrast");
+</script>
+</body>
+</html>
