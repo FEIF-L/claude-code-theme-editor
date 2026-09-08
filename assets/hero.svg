@@ -1,0 +1,106 @@
+<svg width="1280" height="440" viewBox="0 0 1280 440" fill="none" xmlns="http://www.w3.org/2000/svg" font-family="'Segoe UI', system-ui, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1280" y2="440" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0d0d14"/>
+      <stop offset="1" stop-color="#15151c"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#13F4FB"/>
+      <stop offset="0.5" stop-color="#D568E3"/>
+      <stop offset="1" stop-color="#FF6B00"/>
+    </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="440" fill="url(#bg)"/>
+
+  <!-- ambient glow blobs -->
+  <circle cx="180" cy="90" r="120" fill="#13F4FB" opacity="0.10" filter="url(#soft)"/>
+  <circle cx="1120" cy="360" r="140" fill="#D568E3" opacity="0.10" filter="url(#soft)"/>
+
+  <!-- ===== Title block ===== -->
+  <text x="64" y="150" font-size="52" font-weight="800" fill="#ffffff">Claude Code</text>
+  <text x="64" y="212" font-size="52" font-weight="800" fill="url(#glow)">Theme Editor</text>
+  <text x="66" y="258" font-size="19" fill="#A0A0A0">Visual editor · live preview · 72 tokens · one-click JSON</text>
+
+  <!-- pills -->
+  <g font-size="14" font-weight="600">
+    <rect x="64" y="290" width="132" height="30" rx="15" fill="#13F4FB" opacity="0.14"/>
+    <text x="130" y="310" fill="#13F4FB" text-anchor="middle">🎨 Live preview</text>
+    <rect x="208" y="290" width="150" height="30" rx="15" fill="#D568E3" opacity="0.14"/>
+    <text x="283" y="310" fill="#E79BF0" text-anchor="middle">🌐 EN / 中文</text>
+    <rect x="370" y="290" width="150" height="30" rx="15" fill="#FF6B00" opacity="0.16"/>
+    <text x="445" y="310" fill="#FFB066" text-anchor="middle">⚡ Zero deps</text>
+  </g>
+
+  <!-- ===== Mock editor window ===== -->
+  <g transform="translate(660, 60)">
+    <rect x="0" y="0" width="556" height="320" rx="10" fill="#12121a" stroke="#2c2c38" stroke-width="1"/>
+    <!-- titlebar -->
+    <rect x="0" y="0" width="556" height="34" rx="10" fill="#1a1a24"/>
+    <rect x="0" y="20" width="556" height="14" fill="#1a1a24"/>
+    <text x="16" y="22" font-size="12" fill="#13F4FB">✳</text>
+    <text x="34" y="22" font-size="12" fill="#A0A0A0">claude — theme editor</text>
+    <circle cx="512" cy="17" r="4" fill="#555"/>
+    <circle cx="528" cy="17" r="4" fill="#555"/>
+    <rect x="538" y="13" width="8" height="8" fill="none" stroke="#e81123" stroke-width="1.4"/>
+
+    <!-- left: preview -->
+    <rect x="16" y="50" width="270" height="252" rx="6" fill="#0d0d14" stroke="#262633"/>
+    <rect x="30" y="66" width="150" height="16" rx="3" fill="#13F4FB" opacity="0.85"/>
+    <rect x="30" y="94" width="242" height="26" rx="4" fill="#D568E3"/>
+    <text x="40" y="112" font-size="12" fill="#18ECA5" font-weight="600">user message</text>
+    <text x="30" y="146" font-size="12" fill="#18ECA5">✳ Claude — sure, adjusting now</text>
+    <text x="30" y="170" font-size="12" fill="#39FF14">✔ theme found</text>
+    <rect x="30" y="182" width="242" height="30" rx="4" fill="none" stroke="#FFD700"/>
+    <text x="40" y="201" font-size="11" fill="#FFD700">⚠ permission</text>
+    <rect x="30" y="222" width="242" height="46" rx="4" fill="#161620"/>
+    <text x="40" y="240" font-size="11" fill="#FF4747">- base: "light"</text>
+    <text x="40" y="258" font-size="11" fill="#B7FF00">+ base: "dark"</text>
+
+    <!-- right: color rows -->
+    <g transform="translate(302, 50)">
+      <text x="0" y="12" font-size="11" fill="#6a6a7a" font-weight="700" letter-spacing="0.5">BRAND / TEXT</text>
+      <g>
+        <rect x="0" y="24" width="24" height="18" rx="4" fill="#13F4FB"/>
+        <rect x="32" y="26" width="120" height="14" rx="3" fill="#26263a"/>
+        <text x="36" y="37" font-size="10" fill="#cfcfda">claude</text>
+        <rect x="176" y="24" width="62" height="18" rx="3" fill="#0e0e14" stroke="#333"/>
+        <text x="184" y="37" font-size="9" fill="#9fe">#13F4FB</text>
+      </g>
+      <g transform="translate(0,28)">
+        <rect x="0" y="24" width="24" height="18" rx="4" fill="#18ECA5"/>
+        <rect x="32" y="26" width="120" height="14" rx="3" fill="#26263a"/>
+        <text x="36" y="37" font-size="10" fill="#cfcfda">text</text>
+        <rect x="176" y="24" width="62" height="18" rx="3" fill="#0e0e14" stroke="#333"/>
+        <text x="184" y="37" font-size="9" fill="#9fe">#18ECA5</text>
+      </g>
+      <g transform="translate(0,56)">
+        <rect x="0" y="24" width="24" height="18" rx="4" fill="#D568E3"/>
+        <rect x="32" y="26" width="120" height="14" rx="3" fill="#26263a"/>
+        <text x="36" y="37" font-size="10" fill="#cfcfda">userMsgBg</text>
+        <rect x="176" y="24" width="62" height="18" rx="3" fill="#0e0e14" stroke="#333"/>
+        <text x="184" y="37" font-size="9" fill="#9fe">#D568E3</text>
+      </g>
+      <g transform="translate(0,84)">
+        <rect x="0" y="24" width="24" height="18" rx="4" fill="#FF6B00"/>
+        <rect x="32" y="26" width="120" height="14" rx="3" fill="#26263a"/>
+        <text x="36" y="37" font-size="10" fill="#cfcfda">planMode</text>
+        <rect x="176" y="24" width="62" height="18" rx="3" fill="#0e0e14" stroke="#333"/>
+        <text x="184" y="37" font-size="9" fill="#9fe">#FF6B00</text>
+      </g>
+      <g transform="translate(0,112)">
+        <rect x="0" y="24" width="24" height="18" rx="4" fill="#39FF14"/>
+        <rect x="32" y="26" width="120" height="14" rx="3" fill="#26263a"/>
+        <text x="36" y="37" font-size="10" fill="#cfcfda">success</text>
+        <rect x="176" y="24" width="62" height="18" rx="3" fill="#0e0e14" stroke="#333"/>
+        <text x="184" y="37" font-size="9" fill="#9fe">#39FF14</text>
+      </g>
+      <!-- export button -->
+      <rect x="0" y="166" width="238" height="30" rx="6" fill="#13F4FB"/>
+      <text x="119" y="186" font-size="12" font-weight="700" fill="#000" text-anchor="middle">📋 Copy JSON</text>
+    </g>
+  </g>
+</svg>
