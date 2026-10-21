@@ -53,7 +53,7 @@ Then:
 | | |
 |---|---|
 | 🎲 **Random theme** | One click generates a tasteful, contrast-checked palette from a seed — reproducible, never unusable |
-| 🖼️ **Live preview** | A mock Claude Code terminal reflects every change in real time |
+| 🖼️ **Live preview** | A mock Claude Code terminal reflects every change in real time — Full mode switches to an extended preview that shows every token in context (hover a token to locate it) |
 | 🎚️ **Drag-and-drop pickers** | Color picker + hex input for every token, synced both ways |
 | 🔀 **Simple / Full modes** | ~15 everyday tokens, or all **72** including internal ones |
 | 🌐 **Bilingual UI** | Switch English ↔ 中文 on the fly — labels, descriptions, preview |
