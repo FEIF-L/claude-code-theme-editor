@@ -15,7 +15,7 @@
   /* ---------- LEFT: preview ---------- */
   .left { flex: 1 1 55%; padding: 20px; overflow-y: auto; }
   .term {
-    background: var(--bg); border: 1px solid var(--border);
+    background: var(--background); border: 1px solid var(--border);
     border-radius: 6px; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,.4);
   }
   .titlebar {
@@ -73,7 +73,7 @@
   @media (prefers-reduced-motion: reduce) { .shim { animation: none; } }
   .badge { background: var(--chromeYellow); color: var(--inverseText); padding: 0 6px; border-radius: 3px; font-weight: 700; font-size: 11px; }
   .usermsg.hov { background: var(--userMessageBackgroundHover); }
-  .card { background: var(--background); border: 1px solid var(--subtle); border-radius: 4px; padding: 6px 10px; margin: 4px 0 8px 18px; font-size: 12px; }
+  .card { border: 1px solid var(--subtle); border-radius: 4px; padding: 6px 10px; margin: 4px 0 8px 18px; font-size: 12px; }
   .actions { display: inline-flex; gap: 12px; background: var(--messageActionsBackground); color: var(--inactive); padding: 2px 10px; border-radius: 4px; font-size: 12px; margin: 4px 0; }
   .fdiff { border-radius: 4px; overflow: hidden; margin: 8px 0; font-size: 12px; }
   .fdiff > div { padding: 1px 10px; color: var(--text); white-space: pre; }
@@ -212,7 +212,7 @@
     </div>
 
     <!-- full mode: every token in context (data-t = tokens shown by that element) -->
-    <div class="term" id="term-full" hidden>
+    <div class="term" id="term-full" data-t="background" hidden>
       <div class="titlebar">
         <span class="t"><span class="ico">✳</span> claude ~ ~/projects/demo</span>
         <div class="wbtns">
@@ -231,7 +231,7 @@
           <div class="usermsg" data-t="userMessageBackground text" data-i18n="user1"></div>
           <div class="line"><span class="claude">✳ Claude</span> <span class="text" data-i18n="reply"></span></div>
           <div class="line inactive" data-t="inactive">  ⎿ Read src/auth.ts <span class="subtle" data-t="subtle" data-i18n="expand"></span></div>
-          <div class="card text" data-t="background subtle">export function login(user, pass) { … }</div>
+          <div class="card text" data-t="subtle">export function login(user, pass) { … }</div>
           <div class="perm" data-t="permission">
             <div class="h"><span class="shim" data-t="permission permissionShimmer" style="--a:var(--permission);--b:var(--permissionShimmer)" data-i18n="perm"></span></div>
             <div class="text">Edit  src/auth.ts</div>
@@ -410,7 +410,7 @@ const GROUPS = [
     ["subtle","Faint borders / de-emphasized text","更淡的辅助字 / 细边","#666666","s"],
     ["suggestion","Autocomplete hints","补全建议","#FF00FF","s"],
     ["remember","Memory / CLAUDE.md indicator","已记忆 / CLAUDE.md ◆","#39FF14","s"],
-    ["background","Generic surface background","通用背景填充","#0D0D14",""],
+    ["background","Generic surface background (preview terminal fill)","通用背景填充(预览终端底色)","#0D0D14",""],
   ]},
   { en:"Status", zh:"语义状态", tokens: [
     ["success","Success / passing checks","成功 / ✔","#39FF14","s"],
@@ -491,8 +491,9 @@ const GROUPS = [
   ]},
 ];
 
-const PREVIEW_BG = { dark: { bg:"#0d0d14", border:"#333", titlebar:"#12121f" },
-                     light:{ bg:"#ffffff", border:"#e0e0e0", titlebar:"#f2f2f2" } };
+// window chrome only — the terminal fill itself comes from the `background` token
+const PREVIEW_BG = { dark: { border:"#333", titlebar:"#12121f" },
+                     light:{ border:"#e0e0e0", titlebar:"#f2f2f2" } };
 
 const DEFAULTS = {};
 GROUPS.forEach(g => g.tokens.forEach(t => DEFAULTS[t[0]] = t[3]));
@@ -559,7 +560,7 @@ function buildRows() {
   });
 }
 function highlight(k, on) {
-  document.querySelectorAll(`#term-full [data-t~="${k}"]`).forEach(el => el.classList.toggle("hl", on));
+  document.querySelectorAll(`#term-full[data-t~="${k}"], #term-full [data-t~="${k}"]`).forEach(el => el.classList.toggle("hl", on));
 }
 function showPreview() {
   $("term").hidden = mode === "full"; $("term-full").hidden = mode !== "full";
