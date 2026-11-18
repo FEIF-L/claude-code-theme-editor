@@ -40,7 +40,7 @@ cd claude-code-theme-editor
 
 Then:
 
-1. Edit colors on the right, watch the preview on the left.
+1. Edit colors on the right, watch the preview on the left — or click **Import .json** (or drop a file on the page) to start from an existing theme.
 2. Toggle **Simple / Full** and **中 / EN** as you like.
 3. Click **Copy JSON to clipboard**.
 4. Save it as a theme file:
@@ -53,11 +53,12 @@ Then:
 | | |
 |---|---|
 | 🎲 **Random theme** | One click generates a tasteful, contrast-checked palette from a seed — reproducible, never unusable |
-| 🖼️ **Live preview** | A mock Claude Code terminal reflects every change in real time |
+| 🖼️ **Live preview** | A mock Claude Code terminal reflects every change in real time — Full mode switches to an extended preview that shows every token in context (hover a token to locate it) |
 | 🎚️ **Drag-and-drop pickers** | Color picker + hex input for every token, synced both ways |
 | 🔀 **Simple / Full modes** | ~15 everyday tokens, or all **72** including internal ones |
 | 🌐 **Bilingual UI** | Switch English ↔ 中文 on the fly — labels, descriptions, preview |
 | 📋 **One-click export** | Copy JSON to clipboard or download a `.json` |
+| 📂 **Import** | Load an existing theme `.json` (file picker or drag & drop) and keep editing |
 | ⚠️ **Known-issue flags** | Tokens with upstream bugs are marked so you're not surprised |
 
 ## 🎨 Theme file format

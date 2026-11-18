@@ -15,7 +15,7 @@
   /* ---------- LEFT: preview ---------- */
   .left { flex: 1 1 55%; padding: 20px; overflow-y: auto; }
   .term {
-    background: var(--bg); border: 1px solid var(--border);
+    background: var(--termbg); border: 1px solid var(--border);
     border-radius: 6px; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,.4);
   }
   .titlebar {
@@ -57,6 +57,45 @@
   .prompt .caret { color: var(--claude); }
   .prompt .cursor { color: var(--text); animation: blink 1s step-end infinite; }
   @keyframes blink { 50% { opacity: 0; } }
+
+  /* ---------- full preview: every token ---------- */
+  .fp { display: flex; }
+  .fp-main { flex: 1; min-width: 0; padding: 16px; font-size: 13px; }
+  .fp-side { width: 150px; flex-shrink: 0; background: var(--composerSidebarBackground); border-left: 1px solid var(--border); padding: 14px 12px; font-size: 12px; }
+  .fp-side .h { color: var(--inactive); margin-bottom: 8px; }
+  .fp-side div { margin: 4px 0; }
+  .fp ::selection { background: var(--selectionBg); }
+  .shim {
+    background: linear-gradient(90deg, var(--a) 0%, var(--b) 50%, var(--a) 100%) 0 0 / 200% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent; animation: shim 2.4s linear infinite;
+  }
+  @keyframes shim { to { background-position: -200% 0; } }
+  @media (prefers-reduced-motion: reduce) { .shim { animation: none; } }
+  .badge { background: var(--chromeYellow); color: var(--inverseText); padding: 0 6px; border-radius: 3px; font-weight: 700; font-size: 11px; }
+  .usermsg.hov { background: var(--userMessageBackgroundHover); }
+  .card { border: 1px solid var(--subtle); border-radius: 4px; padding: 6px 10px; margin: 4px 0 8px 18px; font-size: 12px; }
+  .actions { display: inline-flex; gap: 12px; background: var(--messageActionsBackground); color: var(--inactive); padding: 2px 10px; border-radius: 4px; font-size: 12px; margin: 4px 0; }
+  .fdiff { border-radius: 4px; overflow: hidden; margin: 8px 0; font-size: 12px; }
+  .fdiff > div { padding: 1px 10px; color: var(--text); white-space: pre; }
+  .fdiff .r  { background: var(--diffRemoved); }        .fdiff .a  { background: var(--diffAdded); }
+  .fdiff .rd { background: var(--diffRemovedDimmed); }  .fdiff .ad { background: var(--diffAddedDimmed); }
+  .fdiff .rw { background: var(--diffRemovedWord); }    .fdiff .aw { background: var(--diffAddedWord); }
+  .stat { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 8px 0; }
+  .note { padding: 3px 10px; border-radius: 4px; margin: 6px 0; }
+  .inbox { padding: 6px 10px; margin: 10px 0 6px; display: flex; gap: 8px; align-items: baseline; }
+  .inbox.bash { border: 1px solid var(--bashBorder); }
+  .inbox.main { border: 1px solid; border-image: linear-gradient(90deg, var(--promptBorder), var(--promptBorderShimmer), var(--promptBorder)) 1; }
+  .sel { background: var(--selectionBg); color: var(--text); }
+  .chips { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; }
+  .spec { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; font-size: 12px; }
+  .spec-h { color: var(--subtle); font-size: 11px; margin: 14px 0 6px; }
+  .bar { display: inline-flex; width: 200px; height: 10px; border-radius: 2px; overflow: hidden; }
+  .bar .f { width: 62%; background: var(--rate_limit_fill); }
+  .bar .e { flex: 1; background: var(--rate_limit_empty); }
+  .clawd { display: inline-grid; grid-template-columns: repeat(18, 4px); grid-auto-rows: 7px; background: var(--clawd_background); padding: 6px; border-radius: 4px; }
+  .clawd .on { background: var(--clawd_body); }
+  .rainbow { font-weight: 700; letter-spacing: 1px; }
+  .hl { outline: 1px dashed var(--text); outline-offset: 2px; }
 
   /* ---------- RIGHT: editor ---------- */
   .right { flex: 1 1 45%; max-width: 460px; background: #1c1c24; border-left: 1px solid #2c2c38; display: flex; flex-direction: column; }
@@ -126,13 +165,14 @@
     font-size: 12px; opacity: 0; pointer-events: none; transition: opacity .2s;
   }
   .toast.show { opacity: 1; }
+  .toast.err { background: #a33; }
   .hint { font-size: 10px; color: #6a6a7a; margin-top: 2px; }
 </style>
 </head>
 <body>
 <div class="app">
   <!-- LEFT -->
-  <div class="left">
+  <div class="left" id="preview">
     <div class="term" id="term">
       <div class="titlebar">
         <span class="t"><span class="ico">✳</span> claude ~ ~/projects/demo</span>
@@ -169,6 +209,100 @@
           <span class="caret">❯</span><span class="text" id="pv-prompt">试试其他配色</span>
           <span class="suggest" id="pv-sugg"> 按 Tab 补全…</span><span class="cursor">▋</span>
         </div>
+        <div class="line"><span style="color:var(--autoAccept)" id="pv-accept">⏵⏵ 自动接受编辑</span> <span style="color:var(--background)" id="pv-bgtask">· 1 个 shell</span></div>
+      </div>
+    </div>
+
+    <!-- full mode: every token in context (data-t = tokens shown by that element) -->
+    <div class="term" id="term-full" hidden>
+      <div class="titlebar">
+        <span class="t"><span class="ico">✳</span> claude ~ ~/projects/demo</span>
+        <div class="wbtns">
+          <div class="wbtn"><svg viewBox="0 0 11 11"><line x1="0" y1="5.5" x2="11" y2="5.5" stroke="currentColor" stroke-width="1"/></svg></div>
+          <div class="wbtn"><svg viewBox="0 0 11 11"><rect x="0.5" y="0.5" width="10" height="10" fill="none" stroke="currentColor" stroke-width="1"/></svg></div>
+          <div class="wbtn close"><svg viewBox="0 0 11 11"><line x1="0" y1="0" x2="11" y2="11" stroke="currentColor" stroke-width="1"/><line x1="11" y1="0" x2="0" y2="11" stroke="currentColor" stroke-width="1"/></svg></div>
+        </div>
+      </div>
+      <div class="fp">
+        <div class="fp-main">
+          <div class="banner" data-t="claude">✳ Claude Code v2.1 · <span class="subtle">~/projects/demo</span></div>
+          <div class="line"><span class="badge" data-t="chromeYellow inverseText">NEW</span> <span data-t="chromeYellow" style="color:var(--chromeYellow)" data-i18n="news"></span></div>
+          <div class="line" data-t="professionalBlue" style="color:var(--professionalBlue)">✔ <span data-i18n="login"></span></div>
+          <div class="usermsg hov" data-t="userMessageBackgroundHover"><span data-i18n="user0"></span> <span class="inactive" data-i18n="hov"></span></div>
+          <div class="line"><span class="success">✔</span> <span class="text" data-i18n="r0"></span></div>
+          <div class="usermsg" data-t="userMessageBackground text" data-i18n="user1"></div>
+          <div class="line"><span class="claude">✳ Claude</span> <span class="text" data-i18n="reply"></span></div>
+          <div class="line inactive" data-t="inactive">  ⎿ Read src/auth.ts <span class="subtle" data-t="subtle" data-i18n="expand"></span></div>
+          <div class="card text" data-t="subtle">export function login(user, pass) { … }</div>
+          <div class="perm" data-t="permission">
+            <div class="h"><span class="shim" data-t="permission permissionShimmer" style="--a:var(--permission);--b:var(--permissionShimmer)" data-i18n="perm"></span></div>
+            <div class="text">Edit  src/auth.ts</div>
+            <div class="opt inactive" id="pvf-opt"></div>
+          </div>
+          <div class="fdiff">
+            <div class="rd" data-t="diffRemovedDimmed"> 11    const session = store.get(id);</div>
+            <div class="r" data-t="diffRemoved diffRemovedWord">-12    return <span class="rw">session</span>.user;</div>
+            <div class="a" data-t="diffAdded diffAddedWord">+12    return <span class="aw">jwt.verify(token)</span>.user;</div>
+            <div class="ad" data-t="diffAddedDimmed"> 13  }</div>
+          </div>
+          <div class="line"><span class="claude">✳ Claude</span> <span class="text" data-i18n="done"></span></div>
+          <div class="actions" data-t="messageActionsBackground"><span>⧉ copy</span><span>↻ retry</span><span>⚠ <span data-i18n="removed"></span></span></div>
+          <div class="planbox" data-t="planMode">
+            <div class="h" data-i18n="plan"></div>
+            <div class="text" data-i18n="plansteps"></div>
+          </div>
+          <div class="stat">
+            <span class="success" data-t="success">✔ <span data-i18n="ok"></span></span>
+            <span class="error" data-t="error">✘ auth.spec.ts:42</span>
+            <span class="warning" data-t="warning">⚠ <span data-i18n="uncommitted"></span></span>
+            <span class="shim" data-t="warning warningShimmer" style="--a:var(--warning);--b:var(--warningShimmer)" data-i18n="auto"></span>
+            <span data-t="merged" style="color:var(--merged)">⎇ PR #42 merged</span>
+            <span data-t="skill" style="color:var(--skill)">⚡ Skill(pdf)</span>
+            <span data-t="effortUltra" style="color:var(--effortUltra)">◉ ultrathink</span>
+          </div>
+          <div class="note" data-t="memoryBackgroundColor" style="background:var(--memoryBackgroundColor)"><span class="remember" data-t="remember">◆</span> <span class="inactive" data-i18n="mem"></span></div>
+          <div class="note" data-t="bashMessageBackgroundColor" style="background:var(--bashMessageBackgroundColor)"><span style="color:var(--bashBorder)">!</span> <span class="text">npm test</span><br><span class="inactive">  ⎿ 42 passed · 0 failed</span></div>
+          <div class="line text"><span data-i18n="selpre"></span> <span class="sel" data-t="selectionBg" data-i18n="sel"></span></div>
+          <div class="line"><span class="shim" data-t="claude claudeShimmer" style="--a:var(--claude);--b:var(--claudeShimmer)" data-i18n="thinking"></span> <span class="shim" data-t="inactive inactiveShimmer" style="--a:var(--inactive);--b:var(--inactiveShimmer)" data-i18n="esc"></span></div>
+          <div class="line"><span class="shim" data-t="claudeBlue_FOR_SYSTEM_SPINNER claudeBlueShimmer_FOR_SYSTEM_SPINNER" style="--a:var(--claudeBlue_FOR_SYSTEM_SPINNER);--b:var(--claudeBlueShimmer_FOR_SYSTEM_SPINNER)" data-i18n="compact"></span></div>
+          <div class="inbox bash" data-t="bashBorder"><span style="color:var(--bashBorder)">!</span><span class="text">git status</span></div>
+          <div class="prompt inbox main" data-t="promptBorder promptBorderShimmer">
+            <span class="caret">❯</span><span class="text" data-i18n="prompt"></span><span class="suggest" data-t="suggestion"> jwt.verify…</span><span class="cursor">▋</span>
+          </div>
+          <div class="chips">
+            <span class="shim" data-t="autoAccept autoAcceptShimmer" style="--a:var(--autoAccept);--b:var(--autoAcceptShimmer)" data-i18n="accept"></span>
+            <span data-t="background" style="color:var(--background)" data-i18n="bgtask"></span>
+            <span data-t="ide" style="color:var(--ide)">⧉ In auth.ts</span>
+            <span class="shim" data-t="fastMode fastModeShimmer" style="--a:var(--fastMode);--b:var(--fastModeShimmer)">↯ fast</span>
+          </div>
+
+          <div class="spec-h" data-i18n="hSub"></div>
+          <div class="spec">
+            <span data-t="red_FOR_SUBAGENTS_ONLY" style="color:var(--red_FOR_SUBAGENTS_ONLY)">● reviewer</span>
+            <span data-t="blue_FOR_SUBAGENTS_ONLY" style="color:var(--blue_FOR_SUBAGENTS_ONLY)">● explore</span>
+            <span data-t="green_FOR_SUBAGENTS_ONLY" style="color:var(--green_FOR_SUBAGENTS_ONLY)">● test-runner</span>
+            <span data-t="yellow_FOR_SUBAGENTS_ONLY" style="color:var(--yellow_FOR_SUBAGENTS_ONLY)">● docs</span>
+            <span data-t="purple_FOR_SUBAGENTS_ONLY" style="color:var(--purple_FOR_SUBAGENTS_ONLY)">● planner</span>
+            <span data-t="orange_FOR_SUBAGENTS_ONLY" style="color:var(--orange_FOR_SUBAGENTS_ONLY)">● debugger</span>
+            <span data-t="pink_FOR_SUBAGENTS_ONLY" style="color:var(--pink_FOR_SUBAGENTS_ONLY)">● designer</span>
+            <span data-t="cyan_FOR_SUBAGENTS_ONLY" style="color:var(--cyan_FOR_SUBAGENTS_ONLY)">● security</span>
+          </div>
+          <div class="spec-h" data-i18n="hUsage"></div>
+          <div class="spec"><span class="bar" data-t="rate_limit_fill rate_limit_empty"><span class="f"></span><span class="e"></span></span><span class="inactive" data-i18n="usage"></span></div>
+          <div class="spec-h" data-i18n="hBrief"></div>
+          <div class="spec">
+            <span><b data-t="briefLabelYou" style="color:var(--briefLabelYou)">You</b> <span class="text" data-i18n="bYou"></span></span>
+            <span><b data-t="briefLabelClaude" style="color:var(--briefLabelClaude)">Claude</b> <span class="text" data-i18n="bClaude"></span></span>
+          </div>
+          <div class="spec-h" data-i18n="hMisc"></div>
+          <div class="spec"><span class="clawd" id="fp-clawd" data-t="clawd_body clawd_background"></span><span class="rainbow" id="fp-rainbow"></span></div>
+        </div>
+        <div class="fp-side" data-t="composerSidebarBackground">
+          <div class="h" data-i18n="tasks"></div>
+          <div class="success">☑ <span data-i18n="t1"></span></div>
+          <div class="claude">◐ <span data-i18n="t2"></span></div>
+          <div class="inactive">☐ <span data-i18n="t3"></span></div>
+        </div>
       </div>
     </div>
   </div>
@@ -203,8 +337,10 @@
       <button id="btn-copy">📋 复制 JSON 到剪贴板</button>
       <div class="sub">
         <button id="btn-save">💾 下载 .json</button>
+        <button id="btn-import">📂 导入 .json</button>
         <button id="btn-reset">↺ 重置</button>
       </div>
+      <input type="file" id="f-import" accept=".json,application/json" hidden>
       <textarea id="json-out" readonly></textarea>
     </div>
   </div>
@@ -221,11 +357,22 @@ const T = {
     copy: "📋 复制 JSON 到剪贴板", save: "💾 下载 .json", reset: "↺ 重置",
     copied: "已复制到剪贴板 ✔", copiedFb: "已复制(兼容模式)✔", saved: "已下载 ",
     didReset: "已重置", random: "🎲 随机主题", seed: "种子", randomized: "已生成配色 · 种子 ",
+    import: "📂 导入 .json", imported: "已导入 ", importTokens: " 个 token", importSkipped: " · 跳过 ",
+    importErr: "不是有效的主题文件",
     pv: { user: "帮我改一下这个主题的配色", reply: "好的,我来调整。",
       read: "  ⎿ 读取 settings.json…", found: "找到 theme:", perm: "⚠ 权限确认",
       opt: '❯ <b>1.</b> 是　　<b>2.</b> 是,全部允许　　<b>3.</b> 否', plan: "⏸ Plan 模式",
       plansteps: "1. 读取当前 theme  2. 应用新配色  3. 验证", mem: "已记忆:用户偏好 dark 主题",
-      warn: "有未提交的更改", err: "test failed: auth.spec.ts:42", prompt: "试试其他配色", sugg: " 按 Tab 补全…" }
+      warn: "有未提交的更改", err: "test failed: auth.spec.ts:42", prompt: "试试其他配色", sugg: " 按 Tab 补全…", accept: "⏵⏵ 自动接受编辑", bgtask: "· 1 个 shell" },
+    pvf: { news: "自定义主题保存即热重载", login: "已登录 · Claude Max", user0: "先跑一下测试", hov: "(悬停)",
+      r0: "42 个测试通过", user1: "把 auth 重构成 JWT", reply: "好的,先读一下这个模块。", expand: "(ctrl+o 展开)",
+      perm: "⚠ 权限确认", done: "完成 —— 改了 2 个文件。", removed: "v2.1.140 已移除", plan: "⏸ Plan 模式",
+      plansteps: "1. 读取 auth  2. 换成 JWT  3. 跑测试", ok: "构建成功", uncommitted: "有未提交的更改",
+      auto: "⏵ Auto 模式已开", mem: "已记忆:优先用 JWT 而不是 session", selpre: "鼠标选中效果", sel: "长这样",
+      thinking: "✳ 思考中…", esc: "(12s · esc 中断)", compact: "✻ 正在压缩对话…", prompt: "补充测试:",
+      accept: "⏵⏵ 自动接受编辑", bgtask: "· 1 个 shell", hSub: "── 子代理 ──", hUsage: "── 用量 ──", usage: "62% · 下午 3 点重置",
+      hBrief: "── Brief 模式 ──", bYou: "重构 auth", bClaude: "完成,测试通过", hMisc: "── Clawd · 彩虹 ──",
+      tasks: "任务", t1: "读取 auth", t2: "换成 JWT", t3: "跑测试" }
   },
   en: {
     title: "🎨 CC Theme Editor", simple: "Simple", full: "Full",
@@ -234,11 +381,22 @@ const T = {
     copy: "📋 Copy JSON to clipboard", save: "💾 Download .json", reset: "↺ Reset",
     copied: "Copied to clipboard ✔", copiedFb: "Copied (fallback) ✔", saved: "Downloaded ",
     didReset: "Reset done", random: "🎲 Random theme", seed: "seed", randomized: "Generated · seed ",
+    import: "📂 Import .json", imported: "Imported ", importTokens: " tokens", importSkipped: " · skipped ",
+    importErr: "Not a valid theme file",
     pv: { user: "Help me tweak this theme's colors", reply: "Sure, adjusting now.",
       read: "  ⎿ reading settings.json…", found: "theme found:", perm: "⚠ Permission",
       opt: '❯ <b>1.</b> Yes　　<b>2.</b> Yes, allow all　　<b>3.</b> No', plan: "⏸ Plan mode",
       plansteps: "1. Read theme  2. Apply colors  3. Verify", mem: "Remembered: user prefers dark theme",
-      warn: "uncommitted changes", err: "test failed: auth.spec.ts:42", prompt: "try other colors", sugg: " press Tab to complete…" }
+      warn: "uncommitted changes", err: "test failed: auth.spec.ts:42", prompt: "try other colors", sugg: " press Tab to complete…", accept: "⏵⏵ accept edits on", bgtask: "· 1 shell" },
+    pvf: { news: "Custom themes hot-reload on save", login: "Logged in · Claude Max", user0: "Run the tests first", hov: "(hover)",
+      r0: "42 tests passed", user1: "Refactor auth to use JWT", reply: "On it — reading the module first.", expand: "(ctrl+o to expand)",
+      perm: "⚠ Permission", done: "Done — 2 files changed.", removed: "removed in v2.1.140", plan: "⏸ Plan mode",
+      plansteps: "1. Read auth  2. Swap to JWT  3. Run tests", ok: "build ok", uncommitted: "uncommitted changes",
+      auto: "⏵ Auto mode on", mem: "Remembered: prefer JWT over sessions", selpre: "Mouse selection looks", sel: "like this",
+      thinking: "✳ Thinking…", esc: "(12s · esc to interrupt)", compact: "✻ Compacting conversation…", prompt: "add tests for",
+      accept: "⏵⏵ accept edits on", bgtask: "· 1 shell", hSub: "── subagents ──", hUsage: "── usage ──", usage: "62% · resets 3pm",
+      hBrief: "── brief mode ──", bYou: "refactor auth", bClaude: "done, tests pass", hMisc: "── clawd · rainbow ──",
+      tasks: "Tasks", t1: "Read auth", t2: "Swap to JWT", t3: "Run tests" }
   }
 };
 
@@ -261,7 +419,7 @@ const GROUPS = [
     ["subtle","Faint borders / de-emphasized text","更淡的辅助字 / 细边","#666666","s"],
     ["suggestion","Autocomplete hints","补全建议","#FF00FF","s"],
     ["remember","Memory / CLAUDE.md indicator","已记忆 / CLAUDE.md ◆","#39FF14","s"],
-    ["background","Generic surface background","通用背景填充","#0D0D14",""],
+    ["background","Background-task indicator (· 1 shell)","后台任务指示(· 1 个 shell)","#00CCCC",""],
   ]},
   { en:"Status", zh:"语义状态", tokens: [
     ["success","Success / passing checks","成功 / ✔","#39FF14","s"],
@@ -342,20 +500,24 @@ const GROUPS = [
   ]},
 ];
 
-const PREVIEW_BG = { dark: { bg:"#0d0d14", border:"#333", titlebar:"#12121f" },
-                     light:{ bg:"#ffffff", border:"#e0e0e0", titlebar:"#f2f2f2" } };
+// editor-only window chrome and terminal fill (not exported). Note: the `background`
+// token is NOT a fill: Claude Code uses it for the background-task text ("· 1 shell").
+const PREVIEW_BG = { dark: { termbg:"#0d0d14", border:"#333", titlebar:"#12121f" },
+                     light:{ termbg:"#ffffff", border:"#e0e0e0", titlebar:"#f2f2f2" } };
 
 const DEFAULTS = {};
 GROUPS.forEach(g => g.tokens.forEach(t => DEFAULTS[t[0]] = t[3]));
 const state = { ...DEFAULTS };
 let lang = "en", mode = "simple";
-const term = document.getElementById("term");
+let termbg = null;  // preview fill from the random generator; null = per-base default
+const preview = document.getElementById("preview");  // vars live here so both previews inherit them
 const $ = id => document.getElementById(id);
 
 function applyPreview() {
-  for (const k in state) term.style.setProperty("--"+k, state[k]);
-  const bg = PREVIEW_BG[$("f-base").value];
-  for (const k in bg) term.style.setProperty("--"+k, bg[k]);
+  for (const k in state) preview.style.setProperty("--"+k, state[k]);
+  const bg = { ...PREVIEW_BG[$("f-base").value] };
+  if (termbg) bg.termbg = termbg;
+  for (const k in bg) preview.style.setProperty("--"+k, bg[k]);
   document.documentElement.style.setProperty("--claude", state.claude);
   refreshJSON();
 }
@@ -403,6 +565,17 @@ function buildRows() {
     const c = list.querySelector(`input[type=color][data-k="${k}"]`); if (c) c.value = v;
     applyPreview();
   });
+  // hovering a row outlines where that token shows up in the full preview
+  list.querySelectorAll(".row").forEach(row => {
+    const k = row.querySelector("input").dataset.k;
+    row.onmouseenter = () => highlight(k, true); row.onmouseleave = () => highlight(k, false);
+  });
+}
+function highlight(k, on) {
+  document.querySelectorAll(`#term-full[data-t~="${k}"], #term-full [data-t~="${k}"]`).forEach(el => el.classList.toggle("hl", on));
+}
+function showPreview() {
+  $("term").hidden = mode === "full"; $("term-full").hidden = mode !== "full";
 }
 function applyLang() {
   const t = T[lang];
@@ -411,6 +584,7 @@ function applyLang() {
   $("ui-simple").textContent = t.simple; $("ui-full").textContent = t.full;
   $("ui-modehint").textContent = mode === "simple" ? t.modehintSimple : t.modehintFull;
   $("btn-copy").textContent = t.copy; $("btn-save").textContent = t.save; $("btn-reset").textContent = t.reset;
+  $("btn-import").textContent = t.import;
   $("btn-random").textContent = t.random; $("ui-seedlabel").textContent = t.seed;
   const p = t.pv;
   $("pv-user").textContent = p.user; $("pv-reply").textContent = p.reply;
@@ -419,9 +593,23 @@ function applyLang() {
   $("pv-plan").textContent = p.plan; $("pv-plansteps").textContent = p.plansteps;
   $("pv-mem").textContent = p.mem; $("pv-warn").textContent = p.warn;
   $("pv-err").textContent = p.err; $("pv-prompt").textContent = p.prompt; $("pv-sugg").textContent = p.sugg;
+  $("pv-accept").textContent = p.accept; $("pv-bgtask").textContent = p.bgtask;
+  // full preview has many strings → keyed by data-i18n instead of one id each
+  document.querySelectorAll("#term-full [data-i18n]").forEach(el => el.textContent = t.pvf[el.dataset.i18n]);
+  $("pvf-opt").innerHTML = p.opt;
 }
-function toast(msg) {
-  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+
+// ---- full preview: generated specimens ----
+const RAINBOW = ["red","orange","yellow","green","blue","indigo","violet"];
+$("fp-rainbow").innerHTML = [..."ultrathink!"].map((c, i) => {
+  const n = "rainbow_" + RAINBOW[i % RAINBOW.length];
+  return `<span class="shim" data-t="${n} ${n}_shimmer" style="--a:var(--${n});--b:var(--${n}_shimmer)">${c}</span>`;
+}).join("");
+// Clawd as drawn by Claude Code (▐▛███▜▌ / ▝▜█████▛▘ / ▘▘ ▝▝), one char = 2×2 quadrant pixels
+const CLAWD = ["...############...", "...##.######.##...", ".################.", "...############...", "....#.#...#.#....."];
+$("fp-clawd").innerHTML = CLAWD.join("").split("").map(c => c === "#" ? '<i class="on"></i>' : "<i></i>").join("");
+function toast(msg, err) {
+  const t = $("toast"); t.textContent = msg; t.classList.toggle("err", !!err); t.classList.add("show");
   clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 1600);
 }
 
@@ -476,7 +664,7 @@ function genPalette(seedStr){
     claudeBlue_FOR_SYSTEM_SPINNER:hsl2hex(220,80,accentL), claudeBlueShimmer_FOR_SYSTEM_SPINNER:hsl2hex(220,70,accentL+14),
     professionalBlue:hsl2hex(220,70,dark?55:48), chromeYellow:hsl2hex(48,90,dark?60:52),
     text, inverseText:dark?"#000000":"#FFFFFF", inactive, inactiveShimmer:lighten(inactive,12),
-    subtle, suggestion:hsl2hex(H(1),pick(55,80),dark?60:52), remember:success, background:bg,
+    subtle, suggestion:hsl2hex(H(1),pick(55,80),dark?60:52), remember:success, background:fitContrast(hsl2hex(H(1),pick(65,90),dark?pick(55,65):pick(35,45)),bg,4.5,dark),
     success, error, warning, warningShimmer:shim(warning), merged,
     promptBorder:accent, promptBorderShimmer:shim(accent), permission:warning, permissionShimmer:shim(warning),
     planMode, autoAccept:success, autoAcceptShimmer:shim(success), skill:accent, effortUltra:planMode,
@@ -498,16 +686,45 @@ function genPalette(seedStr){
   for(const n in subHue) P[n+"_FOR_SUBAGENTS_ONLY"]=hsl2hex(subHue[n],pick(60,80),dark?62:50);
   [["red",0],["orange",30],["yellow",52],["green",130],["blue",215],["indigo",255],["violet",290]].forEach(([n,h])=>{
     P["rainbow_"+n]=hsl2hex(h,85,dark?58:50); P["rainbow_"+n+"_shimmer"]=hsl2hex(h,75,dark?70:62);});
-  return {base:dark?"dark":"light", colors:P};
+  return {base:dark?"dark":"light", colors:P, termbg:bg};
 }
 function applySeed(seedStr){
-  const {base,colors}=genPalette(seedStr);
-  $("f-base").value=base;
+  const {base,colors,termbg:tb}=genPalette(seedStr);
+  $("f-base").value=base; termbg=tb;
   for(const k in colors) if(k in DEFAULTS) state[k]=colors[k];
   buildRows(); applyPreview();
   $("f-seed").value=seedStr;
   toast(T[lang].randomized+seedStr);
 }
+
+// ============ import theme file ============
+// accepts {name, base, overrides} or a flat token map; unknown keys / non-hex values are skipped
+function normHex(v){
+  if(typeof v!=="string")return null;
+  v=v.trim(); if(!/^#/.test(v))v="#"+v;
+  if(/^#[0-9a-fA-F]{3}$/.test(v))v="#"+v[1]+v[1]+v[2]+v[2]+v[3]+v[3];
+  return /^#[0-9a-fA-F]{6}$/.test(v)?v.toUpperCase():null;
+}
+function importTheme(text){
+  let obj; try{obj=JSON.parse(text);}catch{obj=null;}
+  if(!obj||typeof obj!=="object"||Array.isArray(obj))return toast(T[lang].importErr,true);
+  const src=obj.overrides&&typeof obj.overrides==="object"&&!Array.isArray(obj.overrides)?obj.overrides:obj;
+  const next={};let n=0,skip=0;
+  for(const k in src){
+    if(src===obj&&(k==="name"||k==="base"))continue;
+    const v=k in DEFAULTS?normHex(src[k]):null;
+    if(v){next[k]=v;n++;}else skip++;
+  }
+  if(!n)return toast(T[lang].importErr,true);
+  termbg=null;
+  Object.assign(state,DEFAULTS,next);   // start from defaults so the result matches the file exactly
+  if(typeof obj.name==="string")$("f-name").value=obj.name;
+  if(typeof obj.base==="string")$("f-base").value=/^light/i.test(obj.base)?"light":"dark";
+  $("f-seed").value="";
+  buildRows(); applyPreview();
+  toast(T[lang].imported+n+T[lang].importTokens+(skip?T[lang].importSkipped+skip:""));
+}
+function importFile(file){ if(file) file.text().then(importTheme); }
 
 // ---- toggles ----
 $("mode-toggle").onclick = e => {
@@ -515,7 +732,7 @@ $("mode-toggle").onclick = e => {
   mode = b.dataset.mode;
   $("mode-toggle").querySelectorAll("button").forEach(x => x.classList.toggle("on", x.dataset.mode === mode));
   $("ui-modehint").textContent = mode === "simple" ? T[lang].modehintSimple : T[lang].modehintFull;
-  buildRows();
+  buildRows(); showPreview();
 };
 $("lang-toggle").onclick = e => {
   const b = e.target.closest("button"); if (!b) return;
@@ -537,11 +754,18 @@ $("btn-save").onclick = () => {
   a.href = URL.createObjectURL(blob); a.download = name + ".json"; a.click();
   URL.revokeObjectURL(a.href); toast(T[lang].saved + name + ".json");
 };
-$("btn-reset").onclick = () => { Object.assign(state, DEFAULTS); buildRows(); applyPreview(); $("f-seed").value=""; toast(T[lang].didReset); };
+$("btn-import").onclick = () => $("f-import").click();
+$("f-import").onchange = e => { importFile(e.target.files[0]); e.target.value = ""; };
+document.addEventListener("dragover", e => e.preventDefault());
+document.addEventListener("drop", e => {
+  e.preventDefault();
+  importFile([...e.dataTransfer.files].find(f => /\.json$/i.test(f.name) || f.type === "application/json"));
+});
+$("btn-reset").onclick = () => { Object.assign(state, DEFAULTS); termbg = null; buildRows(); applyPreview(); $("f-seed").value=""; toast(T[lang].didReset); };
 $("btn-random").onclick = () => applySeed(Math.random().toString(36).slice(2, 8));
 $("f-seed").onchange = () => { const v = $("f-seed").value.trim(); if (v) applySeed(v); };
 $("f-name").oninput = refreshJSON;
-$("f-base").onchange = applyPreview;
+$("f-base").onchange = () => { termbg = null; applyPreview(); };
 
 applyLang(); buildRows(); applyPreview();
 </script>
