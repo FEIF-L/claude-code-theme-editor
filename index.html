@@ -15,7 +15,7 @@
   /* ---------- LEFT: preview ---------- */
   .left { flex: 1 1 55%; padding: 20px; overflow-y: auto; }
   .term {
-    background: var(--background); border: 1px solid var(--border);
+    background: var(--termbg); border: 1px solid var(--border);
     border-radius: 6px; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,.4);
   }
   .titlebar {
@@ -209,11 +209,12 @@
           <span class="caret">❯</span><span class="text" id="pv-prompt">试试其他配色</span>
           <span class="suggest" id="pv-sugg"> 按 Tab 补全…</span><span class="cursor">▋</span>
         </div>
+        <div class="line"><span style="color:var(--autoAccept)" id="pv-accept">⏵⏵ 自动接受编辑</span> <span style="color:var(--background)" id="pv-bgtask">· 1 个 shell</span></div>
       </div>
     </div>
 
     <!-- full mode: every token in context (data-t = tokens shown by that element) -->
-    <div class="term" id="term-full" data-t="background" hidden>
+    <div class="term" id="term-full" hidden>
       <div class="titlebar">
         <span class="t"><span class="ico">✳</span> claude ~ ~/projects/demo</span>
         <div class="wbtns">
@@ -270,6 +271,7 @@
           </div>
           <div class="chips">
             <span class="shim" data-t="autoAccept autoAcceptShimmer" style="--a:var(--autoAccept);--b:var(--autoAcceptShimmer)" data-i18n="accept"></span>
+            <span data-t="background" style="color:var(--background)" data-i18n="bgtask"></span>
             <span data-t="ide" style="color:var(--ide)">⧉ In auth.ts</span>
             <span class="shim" data-t="fastMode fastModeShimmer" style="--a:var(--fastMode);--b:var(--fastModeShimmer)">↯ fast</span>
           </div>
@@ -361,14 +363,14 @@ const T = {
       read: "  ⎿ 读取 settings.json…", found: "找到 theme:", perm: "⚠ 权限确认",
       opt: '❯ <b>1.</b> 是　　<b>2.</b> 是,全部允许　　<b>3.</b> 否', plan: "⏸ Plan 模式",
       plansteps: "1. 读取当前 theme  2. 应用新配色  3. 验证", mem: "已记忆:用户偏好 dark 主题",
-      warn: "有未提交的更改", err: "test failed: auth.spec.ts:42", prompt: "试试其他配色", sugg: " 按 Tab 补全…" },
+      warn: "有未提交的更改", err: "test failed: auth.spec.ts:42", prompt: "试试其他配色", sugg: " 按 Tab 补全…", accept: "⏵⏵ 自动接受编辑", bgtask: "· 1 个 shell" },
     pvf: { news: "自定义主题保存即热重载", login: "已登录 · Claude Max", user0: "先跑一下测试", hov: "(悬停)",
       r0: "42 个测试通过", user1: "把 auth 重构成 JWT", reply: "好的,先读一下这个模块。", expand: "(ctrl+o 展开)",
       perm: "⚠ 权限确认", done: "完成 —— 改了 2 个文件。", removed: "v2.1.140 已移除", plan: "⏸ Plan 模式",
       plansteps: "1. 读取 auth  2. 换成 JWT  3. 跑测试", ok: "构建成功", uncommitted: "有未提交的更改",
       auto: "⏵ Auto 模式已开", mem: "已记忆:优先用 JWT 而不是 session", selpre: "鼠标选中效果", sel: "长这样",
       thinking: "✳ 思考中…", esc: "(12s · esc 中断)", compact: "✻ 正在压缩对话…", prompt: "补充测试:",
-      accept: "⏵⏵ 自动接受编辑", hSub: "── 子代理 ──", hUsage: "── 用量 ──", usage: "62% · 下午 3 点重置",
+      accept: "⏵⏵ 自动接受编辑", bgtask: "· 1 个 shell", hSub: "── 子代理 ──", hUsage: "── 用量 ──", usage: "62% · 下午 3 点重置",
       hBrief: "── Brief 模式 ──", bYou: "重构 auth", bClaude: "完成,测试通过", hMisc: "── Clawd · 彩虹 ──",
       tasks: "任务", t1: "读取 auth", t2: "换成 JWT", t3: "跑测试" }
   },
@@ -385,14 +387,14 @@ const T = {
       read: "  ⎿ reading settings.json…", found: "theme found:", perm: "⚠ Permission",
       opt: '❯ <b>1.</b> Yes　　<b>2.</b> Yes, allow all　　<b>3.</b> No', plan: "⏸ Plan mode",
       plansteps: "1. Read theme  2. Apply colors  3. Verify", mem: "Remembered: user prefers dark theme",
-      warn: "uncommitted changes", err: "test failed: auth.spec.ts:42", prompt: "try other colors", sugg: " press Tab to complete…" },
+      warn: "uncommitted changes", err: "test failed: auth.spec.ts:42", prompt: "try other colors", sugg: " press Tab to complete…", accept: "⏵⏵ accept edits on", bgtask: "· 1 shell" },
     pvf: { news: "Custom themes hot-reload on save", login: "Logged in · Claude Max", user0: "Run the tests first", hov: "(hover)",
       r0: "42 tests passed", user1: "Refactor auth to use JWT", reply: "On it — reading the module first.", expand: "(ctrl+o to expand)",
       perm: "⚠ Permission", done: "Done — 2 files changed.", removed: "removed in v2.1.140", plan: "⏸ Plan mode",
       plansteps: "1. Read auth  2. Swap to JWT  3. Run tests", ok: "build ok", uncommitted: "uncommitted changes",
       auto: "⏵ Auto mode on", mem: "Remembered: prefer JWT over sessions", selpre: "Mouse selection looks", sel: "like this",
       thinking: "✳ Thinking…", esc: "(12s · esc to interrupt)", compact: "✻ Compacting conversation…", prompt: "add tests for",
-      accept: "⏵⏵ accept edits on", hSub: "── subagents ──", hUsage: "── usage ──", usage: "62% · resets 3pm",
+      accept: "⏵⏵ accept edits on", bgtask: "· 1 shell", hSub: "── subagents ──", hUsage: "── usage ──", usage: "62% · resets 3pm",
       hBrief: "── brief mode ──", bYou: "refactor auth", bClaude: "done, tests pass", hMisc: "── clawd · rainbow ──",
       tasks: "Tasks", t1: "Read auth", t2: "Swap to JWT", t3: "Run tests" }
   }
@@ -417,7 +419,7 @@ const GROUPS = [
     ["subtle","Faint borders / de-emphasized text","更淡的辅助字 / 细边","#666666","s"],
     ["suggestion","Autocomplete hints","补全建议","#FF00FF","s"],
     ["remember","Memory / CLAUDE.md indicator","已记忆 / CLAUDE.md ◆","#39FF14","s"],
-    ["background","Generic surface background (preview terminal fill)","通用背景填充(预览终端底色)","#0D0D14",""],
+    ["background","Background-task indicator (· 1 shell)","后台任务指示(· 1 个 shell)","#00CCCC",""],
   ]},
   { en:"Status", zh:"语义状态", tokens: [
     ["success","Success / passing checks","成功 / ✔","#39FF14","s"],
@@ -498,20 +500,23 @@ const GROUPS = [
   ]},
 ];
 
-// window chrome only — the terminal fill itself comes from the `background` token
-const PREVIEW_BG = { dark: { border:"#333", titlebar:"#12121f" },
-                     light:{ border:"#e0e0e0", titlebar:"#f2f2f2" } };
+// editor-only window chrome and terminal fill (not exported). Note: the `background`
+// token is NOT a fill: Claude Code uses it for the background-task text ("· 1 shell").
+const PREVIEW_BG = { dark: { termbg:"#0d0d14", border:"#333", titlebar:"#12121f" },
+                     light:{ termbg:"#ffffff", border:"#e0e0e0", titlebar:"#f2f2f2" } };
 
 const DEFAULTS = {};
 GROUPS.forEach(g => g.tokens.forEach(t => DEFAULTS[t[0]] = t[3]));
 const state = { ...DEFAULTS };
 let lang = "en", mode = "simple";
+let termbg = null;  // preview fill from the random generator; null = per-base default
 const preview = document.getElementById("preview");  // vars live here so both previews inherit them
 const $ = id => document.getElementById(id);
 
 function applyPreview() {
   for (const k in state) preview.style.setProperty("--"+k, state[k]);
-  const bg = PREVIEW_BG[$("f-base").value];
+  const bg = { ...PREVIEW_BG[$("f-base").value] };
+  if (termbg) bg.termbg = termbg;
   for (const k in bg) preview.style.setProperty("--"+k, bg[k]);
   document.documentElement.style.setProperty("--claude", state.claude);
   refreshJSON();
@@ -588,6 +593,7 @@ function applyLang() {
   $("pv-plan").textContent = p.plan; $("pv-plansteps").textContent = p.plansteps;
   $("pv-mem").textContent = p.mem; $("pv-warn").textContent = p.warn;
   $("pv-err").textContent = p.err; $("pv-prompt").textContent = p.prompt; $("pv-sugg").textContent = p.sugg;
+  $("pv-accept").textContent = p.accept; $("pv-bgtask").textContent = p.bgtask;
   // full preview has many strings → keyed by data-i18n instead of one id each
   document.querySelectorAll("#term-full [data-i18n]").forEach(el => el.textContent = t.pvf[el.dataset.i18n]);
   $("pvf-opt").innerHTML = p.opt;
@@ -658,7 +664,7 @@ function genPalette(seedStr){
     claudeBlue_FOR_SYSTEM_SPINNER:hsl2hex(220,80,accentL), claudeBlueShimmer_FOR_SYSTEM_SPINNER:hsl2hex(220,70,accentL+14),
     professionalBlue:hsl2hex(220,70,dark?55:48), chromeYellow:hsl2hex(48,90,dark?60:52),
     text, inverseText:dark?"#000000":"#FFFFFF", inactive, inactiveShimmer:lighten(inactive,12),
-    subtle, suggestion:hsl2hex(H(1),pick(55,80),dark?60:52), remember:success, background:bg,
+    subtle, suggestion:hsl2hex(H(1),pick(55,80),dark?60:52), remember:success, background:fitContrast(hsl2hex(H(1),pick(65,90),dark?pick(55,65):pick(35,45)),bg,4.5,dark),
     success, error, warning, warningShimmer:shim(warning), merged,
     promptBorder:accent, promptBorderShimmer:shim(accent), permission:warning, permissionShimmer:shim(warning),
     planMode, autoAccept:success, autoAcceptShimmer:shim(success), skill:accent, effortUltra:planMode,
@@ -680,11 +686,11 @@ function genPalette(seedStr){
   for(const n in subHue) P[n+"_FOR_SUBAGENTS_ONLY"]=hsl2hex(subHue[n],pick(60,80),dark?62:50);
   [["red",0],["orange",30],["yellow",52],["green",130],["blue",215],["indigo",255],["violet",290]].forEach(([n,h])=>{
     P["rainbow_"+n]=hsl2hex(h,85,dark?58:50); P["rainbow_"+n+"_shimmer"]=hsl2hex(h,75,dark?70:62);});
-  return {base:dark?"dark":"light", colors:P};
+  return {base:dark?"dark":"light", colors:P, termbg:bg};
 }
 function applySeed(seedStr){
-  const {base,colors}=genPalette(seedStr);
-  $("f-base").value=base;
+  const {base,colors,termbg:tb}=genPalette(seedStr);
+  $("f-base").value=base; termbg=tb;
   for(const k in colors) if(k in DEFAULTS) state[k]=colors[k];
   buildRows(); applyPreview();
   $("f-seed").value=seedStr;
@@ -710,6 +716,7 @@ function importTheme(text){
     if(v){next[k]=v;n++;}else skip++;
   }
   if(!n)return toast(T[lang].importErr,true);
+  termbg=null;
   Object.assign(state,DEFAULTS,next);   // start from defaults so the result matches the file exactly
   if(typeof obj.name==="string")$("f-name").value=obj.name;
   if(typeof obj.base==="string")$("f-base").value=/^light/i.test(obj.base)?"light":"dark";
@@ -754,11 +761,11 @@ document.addEventListener("drop", e => {
   e.preventDefault();
   importFile([...e.dataTransfer.files].find(f => /\.json$/i.test(f.name) || f.type === "application/json"));
 });
-$("btn-reset").onclick = () => { Object.assign(state, DEFAULTS); buildRows(); applyPreview(); $("f-seed").value=""; toast(T[lang].didReset); };
+$("btn-reset").onclick = () => { Object.assign(state, DEFAULTS); termbg = null; buildRows(); applyPreview(); $("f-seed").value=""; toast(T[lang].didReset); };
 $("btn-random").onclick = () => applySeed(Math.random().toString(36).slice(2, 8));
 $("f-seed").onchange = () => { const v = $("f-seed").value.trim(); if (v) applySeed(v); };
 $("f-name").oninput = refreshJSON;
-$("f-base").onchange = applyPreview;
+$("f-base").onchange = () => { termbg = null; applyPreview(); };
 
 applyLang(); buildRows(); applyPreview();
 </script>
