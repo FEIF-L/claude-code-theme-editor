@@ -126,6 +126,7 @@
     font-size: 12px; opacity: 0; pointer-events: none; transition: opacity .2s;
   }
   .toast.show { opacity: 1; }
+  .toast.err { background: #a33; }
   .hint { font-size: 10px; color: #6a6a7a; margin-top: 2px; }
 </style>
 </head>
@@ -203,8 +204,10 @@
       <button id="btn-copy">📋 复制 JSON 到剪贴板</button>
       <div class="sub">
         <button id="btn-save">💾 下载 .json</button>
+        <button id="btn-import">📂 导入 .json</button>
         <button id="btn-reset">↺ 重置</button>
       </div>
+      <input type="file" id="f-import" accept=".json,application/json" hidden>
       <textarea id="json-out" readonly></textarea>
     </div>
   </div>
@@ -221,6 +224,8 @@ const T = {
     copy: "📋 复制 JSON 到剪贴板", save: "💾 下载 .json", reset: "↺ 重置",
     copied: "已复制到剪贴板 ✔", copiedFb: "已复制(兼容模式)✔", saved: "已下载 ",
     didReset: "已重置", random: "🎲 随机主题", seed: "种子", randomized: "已生成配色 · 种子 ",
+    import: "📂 导入 .json", imported: "已导入 ", importTokens: " 个 token", importSkipped: " · 跳过 ",
+    importErr: "不是有效的主题文件",
     pv: { user: "帮我改一下这个主题的配色", reply: "好的,我来调整。",
       read: "  ⎿ 读取 settings.json…", found: "找到 theme:", perm: "⚠ 权限确认",
       opt: '❯ <b>1.</b> 是　　<b>2.</b> 是,全部允许　　<b>3.</b> 否', plan: "⏸ Plan 模式",
@@ -234,6 +239,8 @@ const T = {
     copy: "📋 Copy JSON to clipboard", save: "💾 Download .json", reset: "↺ Reset",
     copied: "Copied to clipboard ✔", copiedFb: "Copied (fallback) ✔", saved: "Downloaded ",
     didReset: "Reset done", random: "🎲 Random theme", seed: "seed", randomized: "Generated · seed ",
+    import: "📂 Import .json", imported: "Imported ", importTokens: " tokens", importSkipped: " · skipped ",
+    importErr: "Not a valid theme file",
     pv: { user: "Help me tweak this theme's colors", reply: "Sure, adjusting now.",
       read: "  ⎿ reading settings.json…", found: "theme found:", perm: "⚠ Permission",
       opt: '❯ <b>1.</b> Yes　　<b>2.</b> Yes, allow all　　<b>3.</b> No', plan: "⏸ Plan mode",
@@ -411,6 +418,7 @@ function applyLang() {
   $("ui-simple").textContent = t.simple; $("ui-full").textContent = t.full;
   $("ui-modehint").textContent = mode === "simple" ? t.modehintSimple : t.modehintFull;
   $("btn-copy").textContent = t.copy; $("btn-save").textContent = t.save; $("btn-reset").textContent = t.reset;
+  $("btn-import").textContent = t.import;
   $("btn-random").textContent = t.random; $("ui-seedlabel").textContent = t.seed;
   const p = t.pv;
   $("pv-user").textContent = p.user; $("pv-reply").textContent = p.reply;
@@ -420,8 +428,8 @@ function applyLang() {
   $("pv-mem").textContent = p.mem; $("pv-warn").textContent = p.warn;
   $("pv-err").textContent = p.err; $("pv-prompt").textContent = p.prompt; $("pv-sugg").textContent = p.sugg;
 }
-function toast(msg) {
-  const t = $("toast"); t.textContent = msg; t.classList.add("show");
+function toast(msg, err) {
+  const t = $("toast"); t.textContent = msg; t.classList.toggle("err", !!err); t.classList.add("show");
   clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 1600);
 }
 
@@ -509,6 +517,34 @@ function applySeed(seedStr){
   toast(T[lang].randomized+seedStr);
 }
 
+// ============ import theme file ============
+// accepts {name, base, overrides} or a flat token map; unknown keys / non-hex values are skipped
+function normHex(v){
+  if(typeof v!=="string")return null;
+  v=v.trim(); if(!/^#/.test(v))v="#"+v;
+  if(/^#[0-9a-fA-F]{3}$/.test(v))v="#"+v[1]+v[1]+v[2]+v[2]+v[3]+v[3];
+  return /^#[0-9a-fA-F]{6}$/.test(v)?v.toUpperCase():null;
+}
+function importTheme(text){
+  let obj; try{obj=JSON.parse(text);}catch{obj=null;}
+  if(!obj||typeof obj!=="object"||Array.isArray(obj))return toast(T[lang].importErr,true);
+  const src=obj.overrides&&typeof obj.overrides==="object"&&!Array.isArray(obj.overrides)?obj.overrides:obj;
+  const next={};let n=0,skip=0;
+  for(const k in src){
+    if(src===obj&&(k==="name"||k==="base"))continue;
+    const v=k in DEFAULTS?normHex(src[k]):null;
+    if(v){next[k]=v;n++;}else skip++;
+  }
+  if(!n)return toast(T[lang].importErr,true);
+  Object.assign(state,DEFAULTS,next);   // start from defaults so the result matches the file exactly
+  if(typeof obj.name==="string")$("f-name").value=obj.name;
+  if(typeof obj.base==="string")$("f-base").value=/^light/i.test(obj.base)?"light":"dark";
+  $("f-seed").value="";
+  buildRows(); applyPreview();
+  toast(T[lang].imported+n+T[lang].importTokens+(skip?T[lang].importSkipped+skip:""));
+}
+function importFile(file){ if(file) file.text().then(importTheme); }
+
 // ---- toggles ----
 $("mode-toggle").onclick = e => {
   const b = e.target.closest("button"); if (!b) return;
@@ -537,6 +573,13 @@ $("btn-save").onclick = () => {
   a.href = URL.createObjectURL(blob); a.download = name + ".json"; a.click();
   URL.revokeObjectURL(a.href); toast(T[lang].saved + name + ".json");
 };
+$("btn-import").onclick = () => $("f-import").click();
+$("f-import").onchange = e => { importFile(e.target.files[0]); e.target.value = ""; };
+document.addEventListener("dragover", e => e.preventDefault());
+document.addEventListener("drop", e => {
+  e.preventDefault();
+  importFile([...e.dataTransfer.files].find(f => /\.json$/i.test(f.name) || f.type === "application/json"));
+});
 $("btn-reset").onclick = () => { Object.assign(state, DEFAULTS); buildRows(); applyPreview(); $("f-seed").value=""; toast(T[lang].didReset); };
 $("btn-random").onclick = () => applySeed(Math.random().toString(36).slice(2, 8));
 $("f-seed").onchange = () => { const v = $("f-seed").value.trim(); if (v) applySeed(v); };
